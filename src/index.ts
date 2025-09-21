@@ -8,6 +8,8 @@ import cors from "cors";
 const app = express();
 
 app.use(helmet());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use((req, res, next) => {
   //Check that exist a signature and validate with the secret
   console.log("REQUEST: ", req);
@@ -21,8 +23,6 @@ app.use((req, res, next) => {
   // Otherwise, apply CORS
   cors()(req, res, next);
 });
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
 app.use("/", routes);
 
