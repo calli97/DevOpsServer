@@ -11,6 +11,7 @@ app.use(helmet());
 app.use((req, res, next) => {
   //Check that exist a signature and validate with the secret
   console.log("REQUEST: ", req);
+  console.log("HEADERS:", req.headers);
   const signature = req.headers["x-hub-signature"] as string;
   if (signature) {
     if (req.path == "/github/webhook") {
