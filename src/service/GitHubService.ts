@@ -10,6 +10,7 @@ class GitHubService {
     res: Response
   ) => {
     const hmac = createHmac("sha1", config.githubWebhookSecret);
+    console.log("BODY:", body);
     const digest = `sha1=${hmac.update(JSON.stringify(body)).digest("hex")}`;
 
     if (signature !== digest) {
