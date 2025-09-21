@@ -1,5 +1,6 @@
-import { WebhookPayload } from "./types";
+import { WebhookPayload, WebhookPayloadPushCommit } from "./types";
 
+//Check types
 export function isCommitPusshedWebhook(payload: WebhookPayload) {
   try {
     if (!payload.action) {
@@ -15,4 +16,9 @@ export function isCommitPusshedWebhook(payload: WebhookPayload) {
   } catch (error) {
     return false;
   }
+}
+
+export function getBranch(payload: WebhookPayloadPushCommit) {
+  const refSplit = payload.ref.split("/");
+  return refSplit[refSplit.length - 1];
 }
