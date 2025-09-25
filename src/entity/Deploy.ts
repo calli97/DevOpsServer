@@ -19,6 +19,12 @@ class Deploy {
 
   @Column()
   commands: string;
+
+  @Column()
+  port: number;
+
+  @Column()
+  expose: boolean;
 }
 
 export default Deploy;
