@@ -10,6 +10,15 @@ class Deploy {
 
   @Column()
   path: string;
+
+  @Column()
+  repository: string;
+
+  @Column()
+  branch: string;
+
+  @Column()
+  commands: string;
 }
 
 export default Deploy;
