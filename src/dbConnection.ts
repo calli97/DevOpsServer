@@ -1,13 +1,20 @@
-import { DataSource, DataSourceOptions } from "typeorm";
+import { DataSource, DataSourceOptions, EntityTarget } from "typeorm";
 import config from "./config";
-import * as path from "path";
+import Deploy from "./entity/Deploy";
+import path from "path";
 
-const dataSource = new DataSource({
+export const dataSource = new DataSource({
   ...config.database,
   entities: [
-    path.join(__dirname, "entity/**/*.ts"),
-    path.join(__dirname, "entity/**/*.js"),
+    path.join(__dirname, "/entity/**/*.ts"),
+    path.join(__dirname, "../entity/**/*.js"),
   ],
+  synchronize: true,
 } as DataSourceOptions);
 
-export const getRepository = dataSource.getRepository;
+export async function getRepository<T>(entity: EntityTarget<T>) {
+  if (!dataSource.isInitialized) {
+    await dataSource.initialize();
+  }
+  return dataSource.getRepository(entity);
+}

@@ -8,6 +8,8 @@
     "rootDir": "src",
     "outDir": "dist",
     "target": "ES2020",
-    "experimentalDecorators": true
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "strictPropertyInitialization": false
   }
 }

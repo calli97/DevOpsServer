@@ -129,7 +129,7 @@ export class Formatter {
       try {
         if (Formatter.isEmptyField(bodyToParse[field.name])) {
           if (field.required) {
-            throw { message: "Invalid field" };
+            throw { message: "Missing field" };
           } else {
             continue;
           }

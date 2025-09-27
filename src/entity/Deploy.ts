@@ -1,5 +1,5 @@
 import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
-import { getRepository } from "../dbConnection";
+import { dataSource, getRepository } from "../dbConnection";
 
 @Entity()
 class Deploy {
@@ -44,7 +44,7 @@ class Deploy {
     startCommands: string,
     port: number
   ) {
-    const repository = getRepository(Deploy);
+    const repository = await getRepository(Deploy);
 
     const newDeploy = new Deploy();
     newDeploy.name = name;
