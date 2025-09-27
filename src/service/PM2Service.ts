@@ -3,8 +3,6 @@ import { promisify } from "util";
 
 const execAsync = promisify(exec);
 
-class PM2Service {
-  const;
-}
+class PM2Service {}
 
 export default PM2Service;
