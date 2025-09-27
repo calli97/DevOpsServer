@@ -19,7 +19,10 @@ class Deploy {
   branch: string;
 
   @Column({ nullable: true })
-  commands: string;
+  buildCommands: string;
+
+  @Column({ nullable: false })
+  startCommands: string;
 
   @Column({ nullable: true })
   port: number;
@@ -37,7 +40,8 @@ class Deploy {
     branch: string,
     expose: boolean,
     active: true,
-    commands: string,
+    buildCommands: string,
+    startCommands: string,
     port: number
   ) {
     const repository = getRepository(Deploy);
@@ -48,7 +52,8 @@ class Deploy {
     (newDeploy.repository = gitRepository), (newDeploy.branch = branch);
     newDeploy.expose = expose;
     newDeploy.active = active;
-    newDeploy.commands = commands;
+    newDeploy.buildCommands = buildCommands;
+    newDeploy.startCommands = startCommands;
     newDeploy.port = port;
     return await repository.save(newDeploy);
   }
