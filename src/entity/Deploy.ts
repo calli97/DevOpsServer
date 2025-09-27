@@ -5,25 +5,25 @@ class Deploy {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ nullable: false })
   name: string;
 
-  @Column()
+  @Column({ nullable: false })
   path: string;
 
-  @Column()
+  @Column({ nullable: false })
   repository: string;
 
-  @Column()
+  @Column({ nullable: false })
   branch: string;
 
-  @Column()
+  @Column({ nullable: true })
   commands: string;
 
-  @Column()
+  @Column({ nullable: true })
   port: number;
 
-  @Column()
+  @Column({ nullable: false, default: false })
   expose: boolean;
 }
 
