@@ -69,6 +69,8 @@ program
     console.log("ERRORS:", errors);
 
     console.log("New deploy: ", newDeploy);
+    await dataSource.destroy();
+    process.exit(0);
   });
 
 async function main() {
