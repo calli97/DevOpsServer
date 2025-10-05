@@ -1,5 +1,9 @@
 import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
 import { dataSource, getRepository } from "../dbConnection";
+import { promisify } from "util";
+import { exec } from "child_process";
+
+const execAsync = promisify(exec);
 
 @Entity()
 class Deploy {
@@ -56,6 +60,21 @@ class Deploy {
     newDeploy.startCommands = startCommands;
     newDeploy.port = port;
     return await repository.save(newDeploy);
+  }
+
+  async runStartCmd() {
+    const { stdout, stderr } = await execAsync(this.startCommands, {
+      cwd: this.path,
+    });
+  }
+
+  async runBuildCmds() {
+    const cmds: Array<string> = JSON.parse(this.buildCommands);
+    for (let i = 0; i < cmds.length; i++) {
+      const { stdout, stderr } = await execAsync(cmds[i], {
+        cwd: this.path,
+      });
+    }
   }
 }
 
