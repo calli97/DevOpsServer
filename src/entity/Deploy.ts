@@ -70,11 +70,10 @@ class Deploy {
 
   async runBuildCmds() {
     const cmds: Array<string> = JSON.parse(this.buildCommands);
-    for (let i = 0; i < cmds.length; i++) {
-      const { stdout, stderr } = await execAsync(cmds[i], {
-        cwd: this.path,
-      });
-    }
+
+    const { stdout, stderr } = await execAsync(cmds.join(" && "), {
+      cwd: this.path,
+    });
   }
 }
 

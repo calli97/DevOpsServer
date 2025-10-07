@@ -1,4 +1,5 @@
 import inquirer from "inquirer";
+import Deploy from "./entity/Deploy";
 
 const mainMenu = async () => {
   const answer = await inquirer.prompt([
@@ -89,6 +90,18 @@ async function addMenu() {
   console.log("ANSWER GEN:", answers);
   console.log("BUILD RESPONSE: ", buildResponses);
   console.log("START: ", startResponse);
+
+  const newDeploy = await Deploy.storeNewDeploy(
+    answers.name,
+    answers.path,
+    answers.repository,
+    answers.branch,
+    false,
+    startResponse.active,
+    JSON.stringify(buildResponses.map((a) => a.buildcmd)),
+    answers.start,
+    3000
+  );
 
   return;
 }
