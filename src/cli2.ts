@@ -100,8 +100,11 @@ async function addMenu() {
     startResponse.active,
     JSON.stringify(buildResponses.map((a) => a.buildcmd)),
     answers.start,
-    3000
+    0
   );
+  if (startResponse.active == "No") {
+    await newDeploy.stop();
+  }
 
   return;
 }
