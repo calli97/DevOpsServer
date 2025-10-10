@@ -62,8 +62,17 @@ class Deploy {
     return await repository.save(newDeploy);
   }
 
-  async runStartCmd() {
-    const { stdout, stderr } = await execAsync(this.startCommands, {
+  async storetartCmd() {
+    const { stdout, stderr } = await execAsync(
+      `pm2 start "${this.startCommands}" --name ${this.name}`,
+      {
+        cwd: this.path,
+      }
+    );
+  }
+
+  async restart() {
+    const { stdout, stderr } = await execAsync(`pm2 restart ${this.name}`, {
       cwd: this.path,
     });
   }
@@ -72,6 +81,12 @@ class Deploy {
     const cmds: Array<string> = JSON.parse(this.buildCommands);
 
     const { stdout, stderr } = await execAsync(cmds.join(" && "), {
+      cwd: this.path,
+    });
+  }
+
+  async stop() {
+    const { stdout, stderr } = await execAsync(`pm2 stop ${this.name}`, {
       cwd: this.path,
     });
   }
