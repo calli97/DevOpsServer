@@ -84,7 +84,8 @@ npm install
 npm run build
 
 echo "🚀 Iniciando servidor con Node.js..."
-node ./build/index.js &
+pm2 start "node ./build/index.js" --name devops-server
+pm2 save
 
 echo
 echo "✅ Instalación completada con éxito."
