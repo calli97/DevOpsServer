@@ -88,6 +88,12 @@ pm2 start "node ./build/index.js" --name devops-server
 pm2 save
 
 echo
+echo "🧱 Configurando firewall para permitir el puerto $PORT..."
+
+sudo ufw allow $PORT/tcp
+sudo ufw status verbose
+
+echo
 echo "✅ Instalación completada con éxito."
 echo "El servidor se está ejecutando en el puerto $PORT"
 echo
