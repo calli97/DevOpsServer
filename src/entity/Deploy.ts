@@ -1,5 +1,5 @@
 import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
-import { dataSource, getRepository } from "../dbConnection";
+import { getRepository } from "../dbConnection";
 import { promisify } from "util";
 import { exec } from "child_process";
 
@@ -7,6 +7,11 @@ const execAsync = promisify(exec);
 
 @Entity()
 class Deploy {
+  // Helper method to sanitize shell inputs
+  private sanitizeName(name: string): string {
+    // Remove potentially dangerous characters, only allow alphanumeric, hyphens, and underscores
+    return name.replace(/[^a-zA-Z0-9_-]/g, '');
+  }
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -43,7 +48,7 @@ class Deploy {
     gitRepository: string,
     branch: string,
     expose: boolean,
-    active: true,
+    active: boolean,
     buildCommands: string,
     startCommands: string,
     port: number
@@ -62,33 +67,120 @@ class Deploy {
     return await repository.save(newDeploy);
   }
 
-  async storetartCmd() {
-    const { stdout, stderr } = await execAsync(
-      `pm2 start "${this.startCommands}" --name ${this.name}`,
-      {
-        cwd: this.path,
+  async storeStartCmd(): Promise<{ stdout: string; stderr: string }> {
+    try {
+      const sanitizedName = this.sanitizeName(this.name);
+      if (!sanitizedName) {
+        throw new Error(`Invalid deploy name: ${this.name}`);
       }
-    );
+
+      const { stdout, stderr } = await execAsync(
+        `pm2 start "${this.startCommands}" --name ${sanitizedName}`,
+        {
+          cwd: this.path,
+        }
+      );
+
+      console.log(`[Deploy ${sanitizedName}] PM2 start output:`, stdout);
+      if (stderr) {
+        console.warn(`[Deploy ${sanitizedName}] PM2 start stderr:`, stderr);
+      }
+
+      return { stdout, stderr };
+    } catch (error) {
+      console.error(`[Deploy ${this.name}] Failed to start:`, error);
+      throw new Error(`Failed to start deploy ${this.name}: ${error.message}`);
+    }
   }
 
-  async restart() {
-    const { stdout, stderr } = await execAsync(`pm2 restart ${this.name}`, {
-      cwd: this.path,
-    });
+  async restart(): Promise<{ stdout: string; stderr: string }> {
+    try {
+      const sanitizedName = this.sanitizeName(this.name);
+      if (!sanitizedName) {
+        throw new Error(`Invalid deploy name: ${this.name}`);
+      }
+
+      const { stdout, stderr } = await execAsync(`pm2 restart ${sanitizedName}`, {
+        cwd: this.path,
+      });
+
+      console.log(`[Deploy ${sanitizedName}] PM2 restart output:`, stdout);
+      if (stderr) {
+        console.warn(`[Deploy ${sanitizedName}] PM2 restart stderr:`, stderr);
+      }
+
+      return { stdout, stderr };
+    } catch (error) {
+      console.error(`[Deploy ${this.name}] Failed to restart:`, error);
+      throw new Error(`Failed to restart deploy ${this.name}: ${error.message}`);
+    }
   }
 
-  async runBuildCmds() {
-    const cmds: Array<string> = JSON.parse(this.buildCommands);
+  async runBuildCmds(): Promise<{ stdout: string; stderr: string }> {
+    try {
+      // Validate buildCommands exists
+      if (!this.buildCommands) {
+        console.log(`[Deploy ${this.name}] No build commands to execute`);
+        return { stdout: '', stderr: '' };
+      }
 
-    const { stdout, stderr } = await execAsync(cmds.join(" && "), {
-      cwd: this.path,
-    });
+      // Parse and validate JSON
+      let cmds: Array<string>;
+      try {
+        cmds = JSON.parse(this.buildCommands);
+      } catch (parseError) {
+        throw new Error(`Invalid JSON in buildCommands: ${parseError.message}`);
+      }
+
+      // Validate it's an array with at least one command
+      if (!Array.isArray(cmds) || cmds.length === 0) {
+        throw new Error('buildCommands must be a non-empty array of strings');
+      }
+
+      // Validate all commands are strings
+      if (!cmds.every(cmd => typeof cmd === 'string')) {
+        throw new Error('All build commands must be strings');
+      }
+
+      console.log(`[Deploy ${this.name}] Running build commands:`, cmds);
+
+      const { stdout, stderr } = await execAsync(cmds.join(" && "), {
+        cwd: this.path,
+      });
+
+      console.log(`[Deploy ${this.name}] Build output:`, stdout);
+      if (stderr) {
+        console.warn(`[Deploy ${this.name}] Build stderr:`, stderr);
+      }
+
+      return { stdout, stderr };
+    } catch (error) {
+      console.error(`[Deploy ${this.name}] Failed to run build commands:`, error);
+      throw new Error(`Failed to run build commands for ${this.name}: ${error.message}`);
+    }
   }
 
-  async stop() {
-    const { stdout, stderr } = await execAsync(`pm2 stop ${this.name}`, {
-      cwd: this.path,
-    });
+  async stop(): Promise<{ stdout: string; stderr: string }> {
+    try {
+      const sanitizedName = this.sanitizeName(this.name);
+      if (!sanitizedName) {
+        throw new Error(`Invalid deploy name: ${this.name}`);
+      }
+
+      const { stdout, stderr } = await execAsync(`pm2 stop ${sanitizedName}`, {
+        cwd: this.path,
+      });
+
+      console.log(`[Deploy ${sanitizedName}] PM2 stop output:`, stdout);
+      if (stderr) {
+        console.warn(`[Deploy ${sanitizedName}] PM2 stop stderr:`, stderr);
+      }
+
+      return { stdout, stderr };
+    } catch (error) {
+      console.error(`[Deploy ${this.name}] Failed to stop:`, error);
+      throw new Error(`Failed to stop deploy ${this.name}: ${error.message}`);
+    }
   }
 }
 
