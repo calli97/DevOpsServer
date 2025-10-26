@@ -179,9 +179,19 @@ async function addMenu() {
     },
   ]);
 
+  const autoUpdateResponse = await inquirer.prompt([
+    {
+      type: "list",
+      name: "autoUpdate",
+      message: "Enable auto-update on git push?",
+      choices: ["Yes", "No"],
+    },
+  ]);
+
   console.log("ANSWER GEN:", answers);
   console.log("BUILD RESPONSE: ", buildResponses);
   console.log("START: ", startResponse);
+  console.log("AUTO UPDATE: ", autoUpdateResponse);
 
   const newDeploy = await Deploy.storeNewDeploy(
     answers.name,
@@ -189,10 +199,11 @@ async function addMenu() {
     answers.repository,
     answers.branch,
     false,
-    startResponse.active,
+    startResponse.active === "Yes",
     JSON.stringify(buildResponses.map((a) => a.buildcmd)),
     answers.start,
-    0
+    0,
+    autoUpdateResponse.autoUpdate === "Yes"
   );
   if (startResponse.active == "No") {
     await newDeploy.stop();

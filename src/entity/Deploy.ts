@@ -42,6 +42,9 @@ class Deploy {
   @Column({ nullable: false, default: true })
   active: boolean;
 
+  @Column({ nullable: false, default: false })
+  autoUpdate: boolean;
+
   static async storeNewDeploy(
     name: string,
     path: string,
@@ -51,7 +54,8 @@ class Deploy {
     active: boolean,
     buildCommands: string,
     startCommands: string,
-    port: number
+    port: number,
+    autoUpdate: boolean
   ) {
     const repository = await getRepository(Deploy);
 
@@ -64,6 +68,7 @@ class Deploy {
     newDeploy.buildCommands = buildCommands;
     newDeploy.startCommands = startCommands;
     newDeploy.port = port;
+    newDeploy.autoUpdate = autoUpdate;
     return await repository.save(newDeploy);
   }
 
@@ -254,6 +259,39 @@ class Deploy {
     );
 
     return deploysWithStatus;
+  }
+
+  // Update deploy: pull latest changes, build, and restart
+  async update(): Promise<void> {
+    try {
+      console.log(`[Deploy ${this.name}] Starting update process...`);
+
+      // 1. Git pull
+      console.log(`[Deploy ${this.name}] Pulling latest changes from ${this.branch}...`);
+      const { stdout: pullStdout, stderr: pullStderr } = await execAsync(
+        `git pull origin ${this.branch}`,
+        { cwd: this.path }
+      );
+      console.log(`[Deploy ${this.name}] Git pull output:`, pullStdout);
+      if (pullStderr) {
+        console.warn(`[Deploy ${this.name}] Git pull stderr:`, pullStderr);
+      }
+
+      // 2. Run build commands
+      if (this.buildCommands) {
+        console.log(`[Deploy ${this.name}] Running build commands...`);
+        await this.runBuildCmds();
+      }
+
+      // 3. Restart the process
+      console.log(`[Deploy ${this.name}] Restarting process...`);
+      await this.restart();
+
+      console.log(`[Deploy ${this.name}] Update completed successfully`);
+    } catch (error) {
+      console.error(`[Deploy ${this.name}] Failed to update:`, error);
+      throw new Error(`Failed to update deploy ${this.name}: ${error.message}`);
+    }
   }
 }
 
