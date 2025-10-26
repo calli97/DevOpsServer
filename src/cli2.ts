@@ -55,13 +55,20 @@ async function processMenu(deploy: Deploy, isRunning: boolean) {
     choices.push("Start process");
   }
 
+  // Add autoUpdate toggle option
+  if (deploy.autoUpdate) {
+    choices.push("Disable auto-update");
+  } else {
+    choices.push("Enable auto-update");
+  }
+
   choices.push(new inquirer.Separator(), "Back to process list");
 
   const answer = await inquirer.prompt([
     {
       type: "list",
       name: "action",
-      message: `Managing: ${deploy.name} [${isRunning ? "Running" : "Stopped"}]`,
+      message: `Managing: ${deploy.name} [${isRunning ? "Running" : "Stopped"}] [Auto-update: ${deploy.autoUpdate ? "ON" : "OFF"}]`,
       choices: choices,
     },
   ]);
@@ -89,6 +96,15 @@ async function processMenu(deploy: Deploy, isRunning: boolean) {
       console.log(`✓ ${deploy.name} stopped successfully\n`);
     } catch (error) {
       console.error(`✗ Failed to stop ${deploy.name}: ${error.message}\n`);
+    }
+  } else if (answer.action === "Enable auto-update" || answer.action === "Disable auto-update") {
+    const newValue = answer.action === "Enable auto-update";
+    console.log(`\n${newValue ? "Enabling" : "Disabling"} auto-update for ${deploy.name}...`);
+    try {
+      await deploy.toggleAutoUpdate(newValue);
+      console.log(`✓ Auto-update ${newValue ? "enabled" : "disabled"} for ${deploy.name}\n`);
+    } catch (error) {
+      console.error(`✗ Failed to update auto-update setting: ${error.message}\n`);
     }
   }
 }

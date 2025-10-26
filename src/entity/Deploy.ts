@@ -293,6 +293,19 @@ class Deploy {
       throw new Error(`Failed to update deploy ${this.name}: ${error.message}`);
     }
   }
+
+  // Toggle auto-update setting
+  async toggleAutoUpdate(enabled: boolean): Promise<void> {
+    try {
+      this.autoUpdate = enabled;
+      const repository = await getRepository(Deploy);
+      await repository.save(this);
+      console.log(`[Deploy ${this.name}] Auto-update ${enabled ? "enabled" : "disabled"}`);
+    } catch (error) {
+      console.error(`[Deploy ${this.name}] Failed to toggle auto-update:`, error);
+      throw new Error(`Failed to toggle auto-update for ${this.name}: ${error.message}`);
+    }
+  }
 }
 
 export default Deploy;
