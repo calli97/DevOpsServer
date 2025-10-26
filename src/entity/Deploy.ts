@@ -182,6 +182,79 @@ class Deploy {
       throw new Error(`Failed to stop deploy ${this.name}: ${error.message}`);
     }
   }
+
+  // Verify and sync process status with PM2
+  async syncStatusWithPM2(): Promise<boolean> {
+    try {
+      const sanitizedName = this.sanitizeName(this.name);
+      if (!sanitizedName) {
+        throw new Error(`Invalid deploy name: ${this.name}`);
+      }
+
+      const { stdout, stderr } = await execAsync("pm2 jlist");
+
+      // Check if stdout is empty or contains error messages
+      if (!stdout || stdout.trim().length === 0) {
+        console.warn(`[Deploy ${this.name}] PM2 returned empty output`);
+        if (this.active !== false) {
+          this.active = false;
+          const repository = await getRepository(Deploy);
+          await repository.save(this);
+        }
+        return false;
+      }
+
+      let processes;
+      try {
+        processes = JSON.parse(stdout);
+      } catch (parseError) {
+        console.error(`[Deploy ${this.name}] Failed to parse PM2 output:`, stdout.substring(0, 200));
+        throw new Error(`Invalid JSON from PM2: ${parseError.message}`);
+      }
+
+      const process = processes.find((p: any) => p.name === sanitizedName);
+
+      const isRunning = process && process.pm2_env.status === "online";
+
+      // Update database if status differs
+      if (this.active !== isRunning) {
+        this.active = isRunning;
+        const repository = await getRepository(Deploy);
+        await repository.save(this);
+        console.log(`[Deploy ${this.name}] Status synced: ${isRunning ? "active" : "inactive"}`);
+      }
+
+      return isRunning;
+    } catch (error) {
+      console.error(`[Deploy ${this.name}] Failed to sync status:`, error);
+      // If PM2 is not responding, assume process is not running
+      if (this.active !== false) {
+        this.active = false;
+        const repository = await getRepository(Deploy);
+        await repository.save(this);
+      }
+      return false;
+    }
+  }
+
+  // Static method to list all processes with their current status
+  static async listProcessesWithStatus(): Promise<Array<{ deploy: Deploy; isRunning: boolean }>> {
+    const repository = await getRepository(Deploy);
+    const deploys = await repository.find();
+
+    // Sync status for all deploys
+    const deploysWithStatus = await Promise.all(
+      deploys.map(async (deploy) => {
+        const isRunning = await deploy.syncStatusWithPM2();
+        return {
+          deploy,
+          isRunning,
+        };
+      })
+    );
+
+    return deploysWithStatus;
+  }
 }
 
 export default Deploy;

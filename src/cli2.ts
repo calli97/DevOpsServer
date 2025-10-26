@@ -1,6 +1,98 @@
 import inquirer from "inquirer";
 import Deploy from "./entity/Deploy";
 
+// Function to list all processes with their status
+async function listProcesses() {
+  const deploysWithStatus = await Deploy.listProcessesWithStatus();
+
+  if (deploysWithStatus.length === 0) {
+    console.log("\nNo processes found. Add a new process to get started.\n");
+    return;
+  }
+
+  // Create choices for the menu
+  const choices = [
+    ...deploysWithStatus.map(({ deploy, isRunning }) => ({
+      name: `${deploy.name} - [${isRunning ? "Running" : "Stopped"}]`,
+      value: deploy.id,
+    })),
+    new inquirer.Separator(),
+    { name: "Back to main menu", value: null },
+  ];
+
+  const answer = await inquirer.prompt([
+    {
+      type: "list",
+      name: "processId",
+      message: "Select a process to manage:",
+      choices: choices,
+    },
+  ]);
+
+  if (answer.processId === null) {
+    return;
+  }
+
+  // Find the selected deploy
+  const selected = deploysWithStatus.find(
+    ({ deploy }) => deploy.id === answer.processId
+  );
+
+  if (selected) {
+    await processMenu(selected.deploy, selected.isRunning);
+    // Return to list after action
+    await listProcesses();
+  }
+}
+
+// Menu for individual process management
+async function processMenu(deploy: Deploy, isRunning: boolean) {
+  const choices = [];
+
+  if (isRunning) {
+    choices.push("Stop process");
+  } else {
+    choices.push("Start process");
+  }
+
+  choices.push(new inquirer.Separator(), "Back to process list");
+
+  const answer = await inquirer.prompt([
+    {
+      type: "list",
+      name: "action",
+      message: `Managing: ${deploy.name} [${isRunning ? "Running" : "Stopped"}]`,
+      choices: choices,
+    },
+  ]);
+
+  if (answer.action === "Back to process list") {
+    return;
+  }
+
+  if (answer.action === "Start process") {
+    console.log(`\nStarting ${deploy.name}...`);
+    try {
+      await deploy.storeStartCmd();
+      // Sync status after starting
+      await deploy.syncStatusWithPM2();
+      console.log(`✓ ${deploy.name} started successfully\n`);
+    } catch (error) {
+      console.error(`✗ Failed to start ${deploy.name}: ${error.message}\n`);
+    }
+  } else if (answer.action === "Stop process") {
+    console.log(`\nStopping ${deploy.name}...`);
+    try {
+      await deploy.stop();
+      // Sync status after stopping
+      await deploy.syncStatusWithPM2();
+      console.log(`✓ ${deploy.name} stopped successfully\n`);
+    } catch (error) {
+      console.error(`✗ Failed to stop ${deploy.name}: ${error.message}\n`);
+    }
+  }
+}
+
 const mainMenu = async () => {
   const answer = await inquirer.prompt([
     {
@@ -13,11 +105,11 @@ const mainMenu = async () => {
 
   switch (answer.action) {
     case "Exit":
-      console.log("👋 Bye!");
+      console.log("Bye!");
       process.exit(0);
 
     case "List processes":
-      console.log("Here the list");
+      await listProcesses();
       break;
     case "Add new process":
       await addMenu();
