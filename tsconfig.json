@@ -11,5 +11,6 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "strictPropertyInitialization": false
-  }
+  },
+  "exclude": ["src/cli2.ts"]
 }
