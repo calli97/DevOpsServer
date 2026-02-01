@@ -17,10 +17,16 @@ export class DeployService {
 
   async findById(id: number): Promise<Deploy | null> {
     const repository = await getRepository(Deploy);
-    return repository.findOne({ where: { id } });
+    return repository.findOne({
+      where: { id },
+      relations: { configFiles: true },
+    });
   }
 
-  async findByRepositoryAndBranch(repo: string, branch: string): Promise<Deploy[]> {
+  async findByRepositoryAndBranch(
+    repo: string,
+    branch: string,
+  ): Promise<Deploy[]> {
     const repository = await getRepository(Deploy);
     return repository.find({ where: { repository: repo, branch } });
   }
@@ -44,7 +50,7 @@ export class DeployService {
 
     const { stdout, stderr } = await execAsync(
       `pm2 start "${deploy.startCommands}" --name ${sanitizedName}`,
-      { cwd: deploy.path }
+      { cwd: deploy.path },
     );
 
     console.log(`[DeployService] PM2 start ${sanitizedName}:`, stdout);
@@ -85,7 +91,9 @@ export class DeployService {
     return { stdout, stderr };
   }
 
-  async runBuildCommands(deploy: Deploy): Promise<{ stdout: string; stderr: string }> {
+  async runBuildCommands(
+    deploy: Deploy,
+  ): Promise<{ stdout: string; stderr: string }> {
     if (!deploy.buildCommands) {
       return { stdout: "", stderr: "" };
     }
@@ -154,14 +162,16 @@ export class DeployService {
     }
   }
 
-  async listWithStatus(): Promise<Array<{ deploy: Deploy; isRunning: boolean }>> {
+  async listWithStatus(): Promise<
+    Array<{ deploy: Deploy; isRunning: boolean }>
+  > {
     const deploys = await this.findAll();
 
     return Promise.all(
       deploys.map(async (deploy) => {
         const isRunning = await this.syncStatus(deploy);
         return { deploy, isRunning };
-      })
+      }),
     );
   }
 }
