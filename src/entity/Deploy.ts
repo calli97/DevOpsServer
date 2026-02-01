@@ -1,4 +1,5 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import ConfigFile from "./ConfigFile";
 
 @Entity()
 class Deploy {
@@ -17,8 +18,11 @@ class Deploy {
   @Column({ nullable: false })
   branch: string;
 
-  @Column({ nullable: true })
+  @Column({ type: "text", nullable: true })
   buildCommands: string;
+
+  @Column({ type: "text", nullable: true })
+  afterDeployCommands: string;
 
   @Column({ nullable: false })
   startCommands: string;
@@ -34,6 +38,9 @@ class Deploy {
 
   @Column({ nullable: false, default: false })
   autoUpdate: boolean;
+
+  @OneToMany(() => ConfigFile, (configFile) => configFile.deploy)
+  configFiles: ConfigFile[];
 }
 
 export default Deploy;
