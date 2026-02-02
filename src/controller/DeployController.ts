@@ -17,6 +17,7 @@ export class DeployController {
   createLocalDeploy = async (req: Request, res: Response) => {
     try {
       const deployBody = await this.deployService.create(req.body);
+      return res.status(200).json({ ok: true, data: deployBody });
     } catch (error) {
       logger.error("[DeployController] Error listing deploys:", error);
       return res.status(500).json({ ok: false, error: error.message });

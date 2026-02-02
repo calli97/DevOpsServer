@@ -1,5 +1,6 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import ConfigFile from "./ConfigFile";
+import SlaveServer from "./SlaveServer";
 
 @Entity()
 class Deploy {
@@ -27,12 +28,6 @@ class Deploy {
   @Column({ nullable: false })
   startCommands: string;
 
-  @Column({ nullable: true })
-  port: number;
-
-  @Column({ nullable: false, default: false })
-  expose: boolean;
-
   @Column({ nullable: false, default: true })
   active: boolean;
 
@@ -41,6 +36,9 @@ class Deploy {
 
   @OneToMany(() => ConfigFile, (configFile) => configFile.deploy)
   configFiles: ConfigFile[];
+
+  @ManyToOne(() => SlaveServer, (slaveServer) => slaveServer.deploys, { nullable: true })
+  slaveServer: SlaveServer | null;
 }
 
 export default Deploy;
