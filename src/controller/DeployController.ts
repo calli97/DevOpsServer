@@ -14,6 +14,7 @@ export class DeployController {
       return res.status(500).json({ ok: false, error: error.message });
     }
   };
+
   createDeploy = async (req: Request, res: Response) => {
     try {
       const deploy = await this.deployService.create(req.body);
@@ -26,12 +27,9 @@ export class DeployController {
 
   getById = async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id, 10);
-      if (isNaN(id)) {
-        return res.status(400).json({ ok: false, error: "Invalid ID" });
-      }
+      const { id } = req.params;
+      const deploy = await this.deployService.findById(Number(id));
 
-      const deploy = await this.deployService.findById(id);
       if (!deploy) {
         return res.status(404).json({ ok: false, error: "Deploy not found" });
       }
@@ -45,12 +43,9 @@ export class DeployController {
 
   updateDeploy = async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id, 10);
-      if (isNaN(id)) {
-        return res.status(400).json({ ok: false, error: "Invalid ID" });
-      }
+      const { id } = req.params;
+      const deploy = await this.deployService.updateById(Number(id), req.body);
 
-      const deploy = await this.deployService.updateById(id, req.body);
       if (!deploy) {
         return res.status(404).json({ ok: false, error: "Deploy not found" });
       }
@@ -64,12 +59,9 @@ export class DeployController {
 
   deleteDeploy = async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id, 10);
-      if (isNaN(id)) {
-        return res.status(400).json({ ok: false, error: "Invalid ID" });
-      }
+      const { id } = req.params;
+      const deleted = await this.deployService.delete(Number(id));
 
-      const deleted = await this.deployService.delete(id);
       if (!deleted) {
         return res.status(404).json({ ok: false, error: "Deploy not found" });
       }
