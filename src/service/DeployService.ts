@@ -2,6 +2,7 @@ import { promisify } from "util";
 import { exec } from "child_process";
 import Deploy from "../entity/Deploy";
 import { getRepository } from "../dbConnection";
+import { logger } from "./LogService";
 
 const execAsync = promisify(exec);
 
@@ -53,8 +54,8 @@ export class DeployService {
       { cwd: deploy.path },
     );
 
-    console.log(`[DeployService] PM2 start ${sanitizedName}:`, stdout);
-    if (stderr) console.warn(`[DeployService] stderr:`, stderr);
+    logger.info(`[DeployService] PM2 start ${sanitizedName}:`, stdout);
+    if (stderr) logger.warning(`[DeployService] stderr:`, stderr);
 
     return { stdout, stderr };
   }
@@ -69,8 +70,8 @@ export class DeployService {
       cwd: deploy.path,
     });
 
-    console.log(`[DeployService] PM2 restart ${sanitizedName}:`, stdout);
-    if (stderr) console.warn(`[DeployService] stderr:`, stderr);
+    logger.info(`[DeployService] PM2 restart ${sanitizedName}:`, stdout);
+    if (stderr) logger.warning(`[DeployService] stderr:`, stderr);
 
     return { stdout, stderr };
   }
@@ -85,8 +86,8 @@ export class DeployService {
       cwd: deploy.path,
     });
 
-    console.log(`[DeployService] PM2 stop ${sanitizedName}:`, stdout);
-    if (stderr) console.warn(`[DeployService] stderr:`, stderr);
+    logger.info(`[DeployService] PM2 stop ${sanitizedName}:`, stdout);
+    if (stderr) logger.warning(`[DeployService] stderr:`, stderr);
 
     return { stdout, stderr };
   }
@@ -107,14 +108,14 @@ export class DeployService {
       cwd: deploy.path,
     });
 
-    console.log(`[DeployService] Build ${deploy.name}:`, stdout);
-    if (stderr) console.warn(`[DeployService] stderr:`, stderr);
+    logger.info(`[DeployService] Build ${deploy.name}:`, stdout);
+    if (stderr) logger.warning(`[DeployService] stderr:`, stderr);
 
     return { stdout, stderr };
   }
 
   async update(deploy: Deploy): Promise<void> {
-    console.log(`[DeployService] Updating ${deploy.name}...`);
+    logger.info(`[DeployService] Updating ${deploy.name}...`);
 
     // Git pull
     await execAsync(`git pull origin ${deploy.branch}`, { cwd: deploy.path });
@@ -127,7 +128,7 @@ export class DeployService {
     // Restart
     await this.restart(deploy);
 
-    console.log(`[DeployService] Update completed for ${deploy.name}`);
+    logger.success(`[DeployService] Update completed for ${deploy.name}`);
   }
 
   async syncStatus(deploy: Deploy): Promise<boolean> {

@@ -1,6 +1,7 @@
 import { createHmac } from "crypto";
 import { NextFunction, Response } from "express";
 import config from "../config";
+import { logger } from "./LogService";
 
 export class GitHubService {
   verifySignature(signature: string, body: any): boolean {
@@ -15,7 +16,7 @@ export class GitHubService {
     next: NextFunction,
     res: Response
   ) => {
-    console.log("BODY:", body);
+    logger.info("BODY:", body);
 
     if (!this.verifySignature(signature, body)) {
       return res.status(401).json({ error: true, msg: "Invalid signature" });

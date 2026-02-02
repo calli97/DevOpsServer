@@ -1,5 +1,6 @@
 import { exec } from "child_process";
 import { promisify } from "util";
+import { logger } from "./LogService";
 
 const execAsync = promisify(exec);
 
@@ -7,9 +8,9 @@ class PM2Service {
   static async listAll() {
     const { stdout, stderr } = await execAsync("pm2 ls");
     if (stderr) {
-      return console.log(stderr);
+      return logger.warning(stderr);
     }
-    console.log(stdout);
+    logger.info(stdout);
   }
 }
 

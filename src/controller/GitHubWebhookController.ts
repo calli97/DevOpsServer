@@ -5,6 +5,7 @@ import {
   WebhookPayloadPushCommit,
 } from "../utils/github/types";
 import { getBranch, isCommitPusshedWebhook } from "../utils/github/parser";
+import { logger } from "../service/LogService";
 
 export class GitHubWebhookController {
   constructor(private deployService: DeployService) {}
@@ -26,11 +27,11 @@ export class GitHubWebhookController {
       // Auto-update deploys that have autoUpdate enabled
       for (const deploy of deploys) {
         if (deploy.autoUpdate) {
-          console.log(`[Webhook] Auto-updating deploy: ${deploy.name}`);
+          logger.info(`[Webhook] Auto-updating deploy: ${deploy.name}`);
           try {
             await this.deployService.update(deploy);
           } catch (error) {
-            console.error(`[Webhook] Failed to update ${deploy.name}:`, error);
+            logger.error(`[Webhook] Failed to update ${deploy.name}:`, error);
           }
         }
       }

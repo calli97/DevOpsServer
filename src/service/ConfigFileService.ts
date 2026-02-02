@@ -4,6 +4,7 @@ import ConfigFile from "../entity/ConfigFile";
 import Deploy from "../entity/Deploy";
 import { getRepository } from "../dbConnection";
 import { ConfigFileError, NotFoundError } from "../errors/AppError";
+import { logger } from "./LogService";
 
 export class ConfigFileService {
   async findAll(): Promise<ConfigFile[]> {
@@ -83,7 +84,7 @@ export class ConfigFileService {
     for (const configFile of configFiles) {
       const filePath = path.join(deploy.path, configFile.relativePath, configFile.name);
       await fs.writeFile(filePath, configFile.content, "utf-8");
-      console.log(`[ConfigFileService] Written: ${filePath}`);
+      logger.info(`[ConfigFileService] Written: ${filePath}`);
     }
   }
 }

@@ -1,12 +1,13 @@
 import inquirer from "inquirer";
 import Deploy from "./entity/Deploy";
+import { logger } from "./service/LogService";
 
 // Function to list all processes with their status
 async function listProcesses() {
   const deploysWithStatus = await Deploy.listProcessesWithStatus();
 
   if (deploysWithStatus.length === 0) {
-    console.log("\nNo processes found. Add a new process to get started.\n");
+    logger.info("\nNo processes found. Add a new process to get started.\n");
     return;
   }
 
@@ -78,33 +79,33 @@ async function processMenu(deploy: Deploy, isRunning: boolean) {
   }
 
   if (answer.action === "Start process") {
-    console.log(`\nStarting ${deploy.name}...`);
+    logger.info(`\nStarting ${deploy.name}...`);
     try {
       await deploy.storeStartCmd();
       // Sync status after starting
       await deploy.syncStatusWithPM2();
-      console.log(`✓ ${deploy.name} started successfully\n`);
+      logger.success(`${deploy.name} started successfully\n`);
     } catch (error) {
-      console.error(`✗ Failed to start ${deploy.name}: ${error.message}\n`);
+      logger.error(`Failed to start ${deploy.name}: ${error.message}\n`);
     }
   } else if (answer.action === "Stop process") {
-    console.log(`\nStopping ${deploy.name}...`);
+    logger.info(`\nStopping ${deploy.name}...`);
     try {
       await deploy.stop();
       // Sync status after stopping
       await deploy.syncStatusWithPM2();
-      console.log(`✓ ${deploy.name} stopped successfully\n`);
+      logger.success(`${deploy.name} stopped successfully\n`);
     } catch (error) {
-      console.error(`✗ Failed to stop ${deploy.name}: ${error.message}\n`);
+      logger.error(`Failed to stop ${deploy.name}: ${error.message}\n`);
     }
   } else if (answer.action === "Enable auto-update" || answer.action === "Disable auto-update") {
     const newValue = answer.action === "Enable auto-update";
-    console.log(`\n${newValue ? "Enabling" : "Disabling"} auto-update for ${deploy.name}...`);
+    logger.info(`\n${newValue ? "Enabling" : "Disabling"} auto-update for ${deploy.name}...`);
     try {
       await deploy.toggleAutoUpdate(newValue);
-      console.log(`✓ Auto-update ${newValue ? "enabled" : "disabled"} for ${deploy.name}\n`);
+      logger.success(`Auto-update ${newValue ? "enabled" : "disabled"} for ${deploy.name}\n`);
     } catch (error) {
-      console.error(`✗ Failed to update auto-update setting: ${error.message}\n`);
+      logger.error(`Failed to update auto-update setting: ${error.message}\n`);
     }
   }
 }
@@ -121,7 +122,7 @@ const mainMenu = async () => {
 
   switch (answer.action) {
     case "Exit":
-      console.log("Bye!");
+      logger.info("Bye!");
       process.exit(0);
 
     case "List processes":
@@ -204,10 +205,10 @@ async function addMenu() {
     },
   ]);
 
-  console.log("ANSWER GEN:", answers);
-  console.log("BUILD RESPONSE: ", buildResponses);
-  console.log("START: ", startResponse);
-  console.log("AUTO UPDATE: ", autoUpdateResponse);
+  logger.info("ANSWER GEN:", answers);
+  logger.info("BUILD RESPONSE: ", buildResponses);
+  logger.info("START: ", startResponse);
+  logger.info("AUTO UPDATE: ", autoUpdateResponse);
 
   const newDeploy = await Deploy.storeNewDeploy(
     answers.name,
