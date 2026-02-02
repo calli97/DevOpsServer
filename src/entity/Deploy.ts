@@ -34,10 +34,10 @@ class Deploy {
   @Column({ nullable: false, default: false })
   autoUpdate: boolean;
 
-  @OneToMany(() => ConfigFile, (configFile) => configFile.deploy)
+  @OneToMany(() => ConfigFile, (configFile) => configFile.deploy, { cascade: true })
   configFiles: ConfigFile[];
 
-  @ManyToOne(() => SlaveServer, (slaveServer) => slaveServer.deploys, { nullable: true })
+  @ManyToOne(() => SlaveServer, (slaveServer) => slaveServer.deploys, { nullable: true, cascade: true })
   slaveServer: SlaveServer | null;
 }
 
