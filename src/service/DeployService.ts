@@ -43,6 +43,24 @@ export class DeployService {
     return repository.save(deploy);
   }
 
+  async updateById(id: number, data: Partial<Deploy>): Promise<Deploy | null> {
+    const repository = await getRepository(Deploy);
+    const deploy = await repository.findOne({ where: { id } });
+
+    if (!deploy) {
+      return null;
+    }
+
+    Object.assign(deploy, data);
+    return repository.save(deploy);
+  }
+
+  async delete(id: number): Promise<boolean> {
+    const repository = await getRepository(Deploy);
+    const result = await repository.delete(id);
+    return (result.affected ?? 0) > 0;
+  }
+
   async start(deploy: Deploy): Promise<{ stdout: string; stderr: string }> {
     const sanitizedName = this.sanitizeName(deploy.name);
     if (!sanitizedName) {
