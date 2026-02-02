@@ -20,7 +20,7 @@ export class DeployService {
     const repository = await getRepository(Deploy);
     return repository.findOne({
       where: { id },
-      relations: { configFiles: true },
+      relations: { configFiles: true, slaveServer: true },
     });
   }
 
@@ -132,7 +132,7 @@ export class DeployService {
     return { stdout, stderr };
   }
 
-  async update(deploy: Deploy): Promise<void> {
+  async runDeploy(deploy: Deploy): Promise<void> {
     logger.info(`[DeployService] Updating ${deploy.name}...`);
 
     // Git pull

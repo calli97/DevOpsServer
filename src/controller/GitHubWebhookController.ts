@@ -21,7 +21,7 @@ export class GitHubWebhookController {
       // Find deploys matching this repo and branch
       const deploys = await this.deployService.findByRepositoryAndBranch(
         repository,
-        branch
+        branch,
       );
 
       // Auto-update deploys that have autoUpdate enabled
@@ -29,7 +29,7 @@ export class GitHubWebhookController {
         if (deploy.autoUpdate) {
           logger.info(`[Webhook] Auto-updating deploy: ${deploy.name}`);
           try {
-            await this.deployService.update(deploy);
+            await this.deployService.runDeploy(deploy);
           } catch (error) {
             logger.error(`[Webhook] Failed to update ${deploy.name}:`, error);
           }

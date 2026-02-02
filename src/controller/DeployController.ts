@@ -72,4 +72,22 @@ export class DeployController {
       return res.status(500).json({ ok: false, error: error.message });
     }
   };
+
+  runDeploy = async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const deploy = await this.deployService.findById(Number(id));
+
+      if (deploy.slaveServer) {
+        //External server
+      } else {
+        //Intern server
+        await this.deployService.runDeploy(deploy);
+      }
+      res.status(400).json({ ok: true });
+    } catch (error) {
+      logger.error("[DeployController] Error deleting deploy:", error);
+      return res.status(500).json({ ok: false, error: error.message });
+    }
+  };
 }
