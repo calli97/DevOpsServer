@@ -17,6 +17,7 @@ const deployController = new DeployController(deployService);
 router.get("/", deployController.listAll);
 router.get("/:id", validate(idParamSchema, "params"), deployController.getById);
 router.post("/", validate(createDeploySchema), deployController.createDeploy);
+router.post("/:id/run", validate(idParamSchema, "params"), deployController.runDeploy);
 router.put("/:id", validate(idParamSchema, "params"), validate(updateDeploySchema), deployController.updateDeploy);
 router.delete("/:id", validate(idParamSchema, "params"), deployController.deleteDeploy);
 
