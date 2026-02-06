@@ -1,6 +1,5 @@
-import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
-import ConfigFile from "./ConfigFile";
-import SlaveServer from "./SlaveServer";
+import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import Project from "./Project";
 
 @Entity()
 class Deploy {
@@ -11,34 +10,16 @@ class Deploy {
   name: string;
 
   @Column({ nullable: false })
-  path: string;
-
-  @Column({ nullable: false })
-  repository: string;
-
-  @Column({ nullable: false })
-  branch: string;
+  startPath: string;
 
   @Column({ type: "text", nullable: true })
   buildCommands: string;
 
-  @Column({ type: "text", nullable: true })
-  afterDeployCommands: string;
-
   @Column({ nullable: false })
   startCommands: string;
 
-  @Column({ nullable: false, default: true })
-  active: boolean;
-
-  @Column({ nullable: false, default: false })
-  autoUpdate: boolean;
-
-  @OneToMany(() => ConfigFile, (configFile) => configFile.deploy, { cascade: true })
-  configFiles: ConfigFile[];
-
-  @ManyToOne(() => SlaveServer, (slaveServer) => slaveServer.deploys, { nullable: true, cascade: true })
-  slaveServer: SlaveServer | null;
+  @ManyToOne(() => Project, (project) => project.deploys, { nullable: false })
+  project: Project;
 }
 
 export default Deploy;
