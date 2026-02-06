@@ -80,6 +80,8 @@ export class ProjectService {
     const started: Deploy[] = [];
     const errors: { deploy: Deploy; error: Error }[] = [];
 
+    await execAsync(`git clone ${project.cloneLine}`, { cwd: project.path });
+
     await execAsync(`git pull origin ${project.branch}`, { cwd: project.path });
     await execAsync(`git switch ${project.branch}`, { cwd: project.path });
 

@@ -20,6 +20,9 @@ class Project {
   @Column({ nullable: false })
   branch: string;
 
+  @Column({ nullable: false })
+  cloneLine: string;
+
   @Column({ type: "text", nullable: true })
   afterDeployCommands: string;
 

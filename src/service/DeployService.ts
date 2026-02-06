@@ -128,49 +128,4 @@ export class DeployService {
 
   //   logger.success(`[DeployService] Update completed for ${deploy.name}`);
   // }
-
-  async syncStatus(deploy: Deploy): Promise<boolean> {
-    try {
-      const sanitizedName = this.sanitizeName(deploy.name);
-      const { stdout } = await execAsync("pm2 jlist");
-
-      if (!stdout || stdout.trim().length === 0) {
-        if (deploy.active !== false) {
-          deploy.active = false;
-          await this.save(deploy);
-        }
-        return false;
-      }
-
-      const processes = JSON.parse(stdout);
-      const process = processes.find((p: any) => p.name === sanitizedName);
-      const isRunning = process?.pm2_env?.status === "online";
-
-      if (deploy.active !== isRunning) {
-        deploy.active = isRunning;
-        await this.save(deploy);
-      }
-
-      return isRunning;
-    } catch (error) {
-      if (deploy.active !== false) {
-        deploy.active = false;
-        await this.save(deploy);
-      }
-      return false;
-    }
-  }
-
-  async listWithStatus(): Promise<
-    Array<{ deploy: Deploy; isRunning: boolean }>
-  > {
-    const deploys = await this.findAll();
-
-    return Promise.all(
-      deploys.map(async (deploy) => {
-        const isRunning = await this.syncStatus(deploy);
-        return { deploy, isRunning };
-      }),
-    );
-  }
 }
