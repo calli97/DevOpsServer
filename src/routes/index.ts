@@ -1,10 +1,10 @@
 import { Router } from "express";
 import github from "./github";
-import deploys from "./deploys";
+import projects from "./projects";
 
 const routes = Router();
 
 routes.use("/github", github);
-routes.use("/deploys", deploys);
+routes.use("/projects", projects);
 
 export default routes;

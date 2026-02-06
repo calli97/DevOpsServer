@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { DeployService } from "../service/DeployService";
+import { ProjectService } from "../service/ProjectService";
 import {
   WebhookPayload,
   WebhookPayloadPushCommit,
@@ -8,7 +8,7 @@ import { getBranch, isCommitPusshedWebhook } from "../utils/github/parser";
 import { logger } from "../service/LogService";
 
 export class GitHubWebhookController {
-  constructor(private deployService: DeployService) {}
+  constructor(private projectService: ProjectService) {}
 
   receiveWebhook = async (req: Request, res: Response) => {
     const payload: WebhookPayload = req.body;
@@ -18,20 +18,23 @@ export class GitHubWebhookController {
       const branch = getBranch(pushPayload);
       const repository = pushPayload.repository.clone_url;
 
-      // Find deploys matching this repo and branch
-      const deploys = await this.deployService.findByRepositoryAndBranch(
+      const projects = await this.projectService.findByRepositoryAndBranch(
         repository,
         branch,
       );
 
-      // Auto-update deploys that have autoUpdate enabled
-      for (const deploy of deploys) {
-        if (deploy.autoUpdate) {
-          logger.info(`[Webhook] Auto-updating deploy: ${deploy.name}`);
+      for (const project of projects) {
+        if (project.autoUpdate) {
+          logger.info(`[Webhook] Auto-updating project: ${project.name}`);
           try {
-            await this.deployService.runDeploy(deploy);
+            const errors = await this.projectService.restartDeploys(project);
+            if (errors.length > 0) {
+              for (const { deploy, error } of errors) {
+                logger.error(`[Webhook] Failed to restart deploy ${deploy.name}:`, error);
+              }
+            }
           } catch (error) {
-            logger.error(`[Webhook] Failed to update ${deploy.name}:`, error);
+            logger.error(`[Webhook] Failed to update ${project.name}:`, error);
           }
         }
       }
