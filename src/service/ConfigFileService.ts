@@ -1,7 +1,7 @@
 import * as fs from "fs/promises";
 import * as path from "path";
 import ConfigFile from "../entity/ConfigFile";
-import Deploy from "../entity/Deploy";
+import Project from "../entity/Project";
 import { getRepository } from "../dbConnection";
 import { ConfigFileError, NotFoundError } from "../errors/AppError";
 import { logger } from "./LogService";
@@ -9,22 +9,22 @@ import { logger } from "./LogService";
 export class ConfigFileService {
   async findAll(): Promise<ConfigFile[]> {
     const repository = await getRepository(ConfigFile);
-    return repository.find({ relations: { deploy: true } });
+    return repository.find({ relations: { project: true } });
   }
 
   async findById(id: number): Promise<ConfigFile | null> {
     const repository = await getRepository(ConfigFile);
     return repository.findOne({
       where: { id },
-      relations: { deploy: true },
+      relations: { project: true },
     });
   }
 
-  async findByDeploy(deployId: number): Promise<ConfigFile[]> {
+  async findByProject(projectId: number): Promise<ConfigFile[]> {
     const repository = await getRepository(ConfigFile);
     return repository.find({
-      where: { deploy: { id: deployId } },
-      relations: { deploy: true },
+      where: { project: { id: projectId } },
+      relations: { project: true },
     });
   }
 
@@ -52,8 +52,8 @@ export class ConfigFileService {
     return (result.affected ?? 0) > 0;
   }
 
-  async writeFiles(deploy: Deploy): Promise<void> {
-    const configFiles = await this.findByDeploy(deploy.id);
+  async writeFiles(project: Project): Promise<void> {
+    const configFiles = await this.findByProject(project.id);
 
     if (configFiles.length === 0) {
       return;
@@ -62,7 +62,7 @@ export class ConfigFileService {
     const missingDirectories: string[] = [];
 
     for (const configFile of configFiles) {
-      const dirPath = path.join(deploy.path, configFile.relativePath);
+      const dirPath = path.join(project.path, configFile.relativePath);
 
       try {
         const stat = await fs.stat(dirPath);
@@ -82,7 +82,7 @@ export class ConfigFileService {
     }
 
     for (const configFile of configFiles) {
-      const filePath = path.join(deploy.path, configFile.relativePath, configFile.name);
+      const filePath = path.join(project.path, configFile.relativePath, configFile.name);
       await fs.writeFile(filePath, configFile.content, "utf-8");
       logger.info(`[ConfigFileService] Written: ${filePath}`);
     }
