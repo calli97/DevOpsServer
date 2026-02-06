@@ -2,6 +2,7 @@ import { Repository } from "typeorm";
 import Project from "../entity/Project";
 import Deploy from "../entity/Deploy";
 import { DeployService } from "./DeployService";
+import { ConfigFileService } from "./ConfigFileService";
 import { NotFoundError } from "../errors/AppError";
 import { promisify } from "util";
 import { exec } from "child_process";
@@ -12,6 +13,7 @@ export class ProjectService {
   constructor(
     private readonly projectRepository: Repository<Project>,
     private readonly deployService: DeployService,
+    private readonly configFileService: ConfigFileService,
   ) {}
 
   async findAll(): Promise<Project[]> {
@@ -85,6 +87,8 @@ export class ProjectService {
     await execAsync(`git pull origin ${project.branch}`, { cwd: project.path });
     await execAsync(`git switch ${project.branch}`, { cwd: project.path });
 
+    await this.configFileService.writeFiles(project);
+
     for (const deploy of project.deploys) {
       try {
         await this.deployService.start(project.path, deploy);
@@ -113,7 +117,7 @@ export class ProjectService {
 
     await execAsync(`git pull origin ${project.branch}`, { cwd: project.path });
     await execAsync(`git switch ${project.branch}`, { cwd: project.path });
-
+    await this.configFileService.writeFiles(project);
     for (const deploy of project.deploys) {
       try {
         await this.deployService.restart(project.path, deploy);
