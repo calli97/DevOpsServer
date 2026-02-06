@@ -1,26 +1,26 @@
 import { promisify } from "util";
 import { exec } from "child_process";
+import { Repository } from "typeorm";
 import Deploy from "../entity/Deploy";
-import { getRepository } from "../dbConnection";
+import PM2Service from "./PM2Service";
 import { logger } from "./LogService";
 
 const execAsync = promisify(exec);
 
 export class DeployService {
-  private sanitizeName(name: string): string {
-    return name.replace(/[^a-zA-Z0-9_-]/g, "");
-  }
+  constructor(
+    private readonly deployRepository: Repository<Deploy>,
+    private readonly pm2Service: PM2Service,
+  ) {}
 
   async findAll(): Promise<Deploy[]> {
-    const repository = await getRepository(Deploy);
-    return repository.find();
+    return this.deployRepository.find();
   }
 
   async findById(id: number): Promise<Deploy | null> {
-    const repository = await getRepository(Deploy);
-    return repository.findOne({
+    return this.deployRepository.findOne({
       where: { id },
-      relations: { configFiles: true, slaveServer: true },
+      relations: { project: true },
     });
   }
 
@@ -28,86 +28,35 @@ export class DeployService {
     repo: string,
     branch: string,
   ): Promise<Deploy[]> {
-    const repository = await getRepository(Deploy);
-    return repository.find({ where: { repository: repo, branch } });
+    return this.deployRepository.find({
+      where: { project: { repository: repo, branch } },
+      relations: { project: true },
+    });
   }
 
   async create(data: Partial<Deploy>): Promise<Deploy> {
-    const repository = await getRepository(Deploy);
-    const deploy = repository.create(data);
-    return repository.save(deploy);
+    const deploy = this.deployRepository.create(data);
+    return this.deployRepository.save(deploy);
   }
 
   async save(deploy: Deploy): Promise<Deploy> {
-    const repository = await getRepository(Deploy);
-    return repository.save(deploy);
+    return this.deployRepository.save(deploy);
   }
 
   async updateById(id: number, data: Partial<Deploy>): Promise<Deploy | null> {
-    const repository = await getRepository(Deploy);
-    const deploy = await repository.findOne({ where: { id } });
+    const deploy = await this.deployRepository.findOne({ where: { id } });
 
     if (!deploy) {
       return null;
     }
 
     Object.assign(deploy, data);
-    return repository.save(deploy);
+    return this.deployRepository.save(deploy);
   }
 
   async delete(id: number): Promise<boolean> {
-    const repository = await getRepository(Deploy);
-    const result = await repository.delete(id);
+    const result = await this.deployRepository.delete(id);
     return (result.affected ?? 0) > 0;
-  }
-
-  async start(deploy: Deploy): Promise<{ stdout: string; stderr: string }> {
-    const sanitizedName = this.sanitizeName(deploy.name);
-    if (!sanitizedName) {
-      throw new Error(`Invalid deploy name: ${deploy.name}`);
-    }
-
-    const { stdout, stderr } = await execAsync(
-      `pm2 start "${deploy.startCommands}" --name ${sanitizedName}`,
-      { cwd: deploy.path },
-    );
-
-    logger.info(`[DeployService] PM2 start ${sanitizedName}:`, stdout);
-    if (stderr) logger.warning(`[DeployService] stderr:`, stderr);
-
-    return { stdout, stderr };
-  }
-
-  async restart(deploy: Deploy): Promise<{ stdout: string; stderr: string }> {
-    const sanitizedName = this.sanitizeName(deploy.name);
-    if (!sanitizedName) {
-      throw new Error(`Invalid deploy name: ${deploy.name}`);
-    }
-
-    const { stdout, stderr } = await execAsync(`pm2 restart ${sanitizedName}`, {
-      cwd: deploy.path,
-    });
-
-    logger.info(`[DeployService] PM2 restart ${sanitizedName}:`, stdout);
-    if (stderr) logger.warning(`[DeployService] stderr:`, stderr);
-
-    return { stdout, stderr };
-  }
-
-  async stop(deploy: Deploy): Promise<{ stdout: string; stderr: string }> {
-    const sanitizedName = this.sanitizeName(deploy.name);
-    if (!sanitizedName) {
-      throw new Error(`Invalid deploy name: ${deploy.name}`);
-    }
-
-    const { stdout, stderr } = await execAsync(`pm2 stop ${sanitizedName}`, {
-      cwd: deploy.path,
-    });
-
-    logger.info(`[DeployService] PM2 stop ${sanitizedName}:`, stdout);
-    if (stderr) logger.warning(`[DeployService] stderr:`, stderr);
-
-    return { stdout, stderr };
   }
 
   async runBuildCommands(
