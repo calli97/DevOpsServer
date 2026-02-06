@@ -72,6 +72,19 @@ export class ProjectService {
   }
 
   async delete(id: number): Promise<boolean> {
+    const project = await this.projectRepository.findOne({
+      where: { id },
+      relations: { deploys: true },
+    });
+
+    if (!project) {
+      return false;
+    }
+
+    for (const deploy of project.deploys) {
+      await this.deployService.delete(deploy.id);
+    }
+
     const result = await this.projectRepository.delete(id);
     return (result.affected ?? 0) > 0;
   }

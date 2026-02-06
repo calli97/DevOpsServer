@@ -46,6 +46,11 @@ export class DeployService {
   }
 
   async delete(id: number): Promise<boolean> {
+    const deploy = await this.deployRepository.findOne({ where: { id } });
+    if (!deploy) {
+      return false;
+    }
+    await this.pm2Service.delete(deploy.name);
     const result = await this.deployRepository.delete(id);
     return (result.affected ?? 0) > 0;
   }
