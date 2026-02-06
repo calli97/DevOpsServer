@@ -4,6 +4,7 @@ import { Repository } from "typeorm";
 import Deploy from "../entity/Deploy";
 import PM2Service from "./PM2Service";
 import { logger } from "./LogService";
+import path from "path";
 
 const execAsync = promisify(exec);
 
@@ -20,16 +21,6 @@ export class DeployService {
   async findById(id: number): Promise<Deploy | null> {
     return this.deployRepository.findOne({
       where: { id },
-      relations: { project: true },
-    });
-  }
-
-  async findByRepositoryAndBranch(
-    repo: string,
-    branch: string,
-  ): Promise<Deploy[]> {
-    return this.deployRepository.find({
-      where: { project: { repository: repo, branch } },
       relations: { project: true },
     });
   }
@@ -59,7 +50,8 @@ export class DeployService {
     return (result.affected ?? 0) > 0;
   }
 
-  async runBuildCommands(
+  private async runBuildCommands(
+    projectPath: string,
     deploy: Deploy,
   ): Promise<{ stdout: string; stderr: string }> {
     if (!deploy.buildCommands) {
@@ -72,7 +64,7 @@ export class DeployService {
     }
 
     const { stdout, stderr } = await execAsync(cmds.join(" && "), {
-      cwd: deploy.path,
+      cwd: path.join(projectPath),
     });
 
     logger.info(`[DeployService] Build ${deploy.name}:`, stdout);
@@ -81,22 +73,61 @@ export class DeployService {
     return { stdout, stderr };
   }
 
-  async runDeploy(deploy: Deploy): Promise<void> {
-    logger.info(`[DeployService] Updating ${deploy.name}...`);
-
-    // Git pull
-    await execAsync(`git pull origin ${deploy.branch}`, { cwd: deploy.path });
-
-    // Build
-    if (deploy.buildCommands) {
-      await this.runBuildCommands(deploy);
+  async start(
+    projectPath: string,
+    deploy: Deploy,
+  ): Promise<{ stdout: string; stderr: string }> {
+    let buildResponse = await this.runBuildCommands(projectPath, deploy);
+    if (buildResponse.stderr && buildResponse.stderr != "") {
+      return buildResponse;
     }
-
-    // Restart
-    await this.restart(deploy);
-
-    logger.success(`[DeployService] Update completed for ${deploy.name}`);
+    return await this.pm2Service.start(
+      deploy.name,
+      deploy.startCommands,
+      path.join(projectPath, deploy.startPath),
+    );
   }
+
+  async restart(
+    projectPath: string,
+    deploy: Deploy,
+  ): Promise<{ stdout: string; stderr: string }> {
+    let buildResponse = await this.runBuildCommands(projectPath, deploy);
+    if (buildResponse.stderr && buildResponse.stderr != "") {
+      return buildResponse;
+    }
+    return await this.pm2Service.restart(
+      deploy.name,
+      path.join(projectPath, deploy.startPath),
+    );
+  }
+
+  async stop(
+    projectPath: string,
+    deploy: Deploy,
+  ): Promise<{ stdout: string; stderr: string }> {
+    return await this.pm2Service.stop(
+      deploy.name,
+      path.join(projectPath, deploy.startPath),
+    );
+  }
+
+  // async runDeploy(deploy: Deploy): Promise<void> {
+  //   logger.info(`[DeployService] Updating ${deploy.name}...`);
+
+  //   // Git pull
+  //   await execAsync(`git pull origin ${deploy.branch}`, { cwd: deploy.path });
+
+  //   // Build
+  //   if (deploy.buildCommands) {
+  //     await this.runBuildCommands(deploy);
+  //   }
+
+  //   // Restart
+  //   await this.restart(deploy);
+
+  //   logger.success(`[DeployService] Update completed for ${deploy.name}`);
+  // }
 
   async syncStatus(deploy: Deploy): Promise<boolean> {
     try {

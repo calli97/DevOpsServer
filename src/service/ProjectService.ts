@@ -1,9 +1,18 @@
 import { Repository } from "typeorm";
 import Project from "../entity/Project";
+import Deploy from "../entity/Deploy";
+import { DeployService } from "./DeployService";
 import { NotFoundError } from "../errors/AppError";
+import { promisify } from "util";
+import { exec } from "child_process";
+
+const execAsync = promisify(exec);
 
 export class ProjectService {
-  constructor(private readonly projectRepository: Repository<Project>) {}
+  constructor(
+    private readonly projectRepository: Repository<Project>,
+    private readonly deployService: DeployService,
+  ) {}
 
   async findAll(): Promise<Project[]> {
     return this.projectRepository.find({
@@ -22,6 +31,13 @@ export class ProjectService {
     }
 
     return project;
+  }
+
+  async findByName(name: string): Promise<Project | null> {
+    return this.projectRepository.findOne({
+      where: { name },
+      relations: { configFiles: true, deploys: true, slaveServer: true },
+    });
   }
 
   async findByRepositoryAndBranch(
@@ -56,5 +72,63 @@ export class ProjectService {
   async delete(id: number): Promise<boolean> {
     const result = await this.projectRepository.delete(id);
     return (result.affected ?? 0) > 0;
+  }
+
+  async startDeploys(
+    project: Project,
+  ): Promise<{ deploy: Deploy; error: Error }[]> {
+    const started: Deploy[] = [];
+    const errors: { deploy: Deploy; error: Error }[] = [];
+
+    await execAsync(`git pull origin ${project.branch}`, { cwd: project.path });
+    await execAsync(`git switch ${project.branch}`, { cwd: project.path });
+
+    for (const deploy of project.deploys) {
+      try {
+        await this.deployService.start(project.path, deploy);
+        started.push(deploy);
+      } catch (error) {
+        errors.push({ deploy, error: error as Error });
+      }
+    }
+
+    if (errors.length > 0) {
+      for (const deploy of started) {
+        try {
+          await this.deployService.stop(project.path, deploy);
+        } catch {}
+      }
+    }
+
+    return errors;
+  }
+
+  async restartDeploys(
+    project: Project,
+  ): Promise<{ deploy: Deploy; error: Error }[]> {
+    const restarted: Deploy[] = [];
+    const errors: { deploy: Deploy; error: Error }[] = [];
+
+    await execAsync(`git pull origin ${project.branch}`, { cwd: project.path });
+    await execAsync(`git switch ${project.branch}`, { cwd: project.path });
+
+    for (const deploy of project.deploys) {
+      try {
+        await this.deployService.restart(project.path, deploy);
+        restarted.push(deploy);
+      } catch (error) {
+        errors.push({ deploy, error: error as Error });
+      }
+    }
+
+    if (errors.length > 0) {
+      for (const deploy of restarted) {
+        try {
+          await this.deployService.stop(project.path, deploy);
+        } catch {}
+      }
+    }
+
+    return errors;
   }
 }
