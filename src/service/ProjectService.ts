@@ -6,6 +6,7 @@ import { ConfigFileService } from "./ConfigFileService";
 import { NotFoundError } from "../errors/AppError";
 import { promisify } from "util";
 import { exec } from "child_process";
+import path from "path";
 import { GitHubService } from "./GitHubService";
 
 const execAsync = promisify(exec);
@@ -97,16 +98,18 @@ export class ProjectService {
     const started: Deploy[] = [];
     const errors: { deploy: Deploy; error: Error }[] = [];
 
+    const projectDir = path.join(project.path, this.githubService.getProjectDirectoryName(project.cloneLine));
+
     await execAsync(`git clone ${project.cloneLine}`, { cwd: project.path });
 
-    await execAsync(`git pull origin ${project.branch}`, { cwd: project.path });
-    await execAsync(`git switch ${project.branch}`, { cwd: project.path });
+    await execAsync(`git pull origin ${project.branch}`, { cwd: projectDir });
+    await execAsync(`git switch ${project.branch}`, { cwd: projectDir });
 
     await this.configFileService.writeFiles(project);
 
     for (const deploy of project.deploys) {
       try {
-        await this.deployService.start(project.path, deploy);
+        await this.deployService.start(projectDir, deploy);
         started.push(deploy);
       } catch (error) {
         errors.push({ deploy, error: error as Error });
@@ -116,7 +119,7 @@ export class ProjectService {
     if (errors.length > 0) {
       for (const deploy of started) {
         try {
-          await this.deployService.stop(project.path, deploy);
+          await this.deployService.stop(projectDir, deploy);
         } catch {}
       }
     }
@@ -130,12 +133,14 @@ export class ProjectService {
     const restarted: Deploy[] = [];
     const errors: { deploy: Deploy; error: Error }[] = [];
 
-    await execAsync(`git pull origin ${project.branch}`, { cwd: project.path });
-    await execAsync(`git switch ${project.branch}`, { cwd: project.path });
+    const projectDir = path.join(project.path, this.githubService.getProjectDirectoryName(project.cloneLine));
+
+    await execAsync(`git pull origin ${project.branch}`, { cwd: projectDir });
+    await execAsync(`git switch ${project.branch}`, { cwd: projectDir });
     await this.configFileService.writeFiles(project);
     for (const deploy of project.deploys) {
       try {
-        await this.deployService.restart(project.path, deploy);
+        await this.deployService.restart(projectDir, deploy);
         restarted.push(deploy);
       } catch (error) {
         errors.push({ deploy, error: error as Error });
@@ -145,7 +150,7 @@ export class ProjectService {
     if (errors.length > 0) {
       for (const deploy of restarted) {
         try {
-          await this.deployService.stop(project.path, deploy);
+          await this.deployService.stop(projectDir, deploy);
         } catch {}
       }
     }
