@@ -6,6 +6,7 @@ import { ConfigFileService } from "./ConfigFileService";
 import { NotFoundError } from "../errors/AppError";
 import { promisify } from "util";
 import { exec } from "child_process";
+import { GitHubService } from "./GitHubService";
 
 const execAsync = promisify(exec);
 
@@ -14,6 +15,7 @@ export class ProjectService {
     private readonly projectRepository: Repository<Project>,
     private readonly deployService: DeployService,
     private readonly configFileService: ConfigFileService,
+    private readonly githubService: GitHubService,
   ) {}
 
   async findAll(): Promise<Project[]> {

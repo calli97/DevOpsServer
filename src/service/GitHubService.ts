@@ -10,6 +10,11 @@ export class GitHubService {
     return signature === digest;
   }
 
+  getProjectDirectoryName(cloneLine: string): string {
+    const repoWithExtension = cloneLine.split("/").pop() || "";
+    return repoWithExtension.replace(/\.git$/, "");
+  }
+
   verifySignatureMiddleware = (
     signature: string,
     body: any,
