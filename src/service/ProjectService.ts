@@ -117,8 +117,12 @@ export class ProjectService {
 
     for (const deploy of project.deploys) {
       try {
-        await this.deployService.start(projectDir, deploy);
-        started.push(deploy);
+        const result = await this.deployService.start(projectDir, deploy);
+        if (result.stderr) {
+          errors.push({ deploy, error: new Error(result.stderr) });
+        } else {
+          started.push(deploy);
+        }
       } catch (error) {
         errors.push({ deploy, error: error as Error });
       }
@@ -151,8 +155,12 @@ export class ProjectService {
     await this.configFileService.writeFiles(project);
     for (const deploy of project.deploys) {
       try {
-        await this.deployService.restart(projectDir, deploy);
-        restarted.push(deploy);
+        const result = await this.deployService.restart(projectDir, deploy);
+        if (result.stderr) {
+          errors.push({ deploy, error: new Error(result.stderr) });
+        } else {
+          restarted.push(deploy);
+        }
       } catch (error) {
         errors.push({ deploy, error: error as Error });
       }
