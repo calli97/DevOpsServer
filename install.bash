@@ -58,24 +58,27 @@ echo
 read -p "Puerto para el servidor (ej: 3040): " PORT
 read -p "GitHub Webhook Secret: " GITHUB_WEBHOOK_SECRET
 
-# --- CREAR ARCHIVO .env ---
-ENV_FILE=".env"
+# --- CREAR ARCHIVO config.ts ---
+CONFIG_FILE="src/config.ts"
 echo
-echo "🧾 Creando archivo $ENV_FILE..."
-cat > $ENV_FILE <<EOF
-PORT=$PORT
-GITHUB_WEBHOOK_SECRET=$GITHUB_WEBHOOK_SECRET
-
-DB_TYPE=$DB_TYPE
-DB_HOST=$DB_HOST
-DB_PORT=$DB_PORT
-DB_USER=$DB_USER
-DB_PASSWORD=$DB_PASSWORD
-DB_NAME=$DB_NAME
+echo "🧾 Creando archivo $CONFIG_FILE..."
+cat > $CONFIG_FILE <<EOF
+export default {
+  port: $PORT,
+  githubWebhookSecret: "$GITHUB_WEBHOOK_SECRET",
+  database: {
+    type: "$DB_TYPE",
+    host: "$DB_HOST",
+    port: $DB_PORT,
+    username: "$DB_USER",
+    password: "$DB_PASSWORD",
+    database: "$DB_NAME",
+  },
+};
 EOF
 
-echo "✅ Archivo .env creado con éxito:"
-cat $ENV_FILE
+echo "✅ Archivo config.ts creado con éxito:"
+cat $CONFIG_FILE
 echo
 
 # --- COMPILAR Y LEVANTAR SERVIDOR ---
