@@ -145,6 +145,11 @@ export class ProjectService {
     const restarted: Deploy[] = [];
     const errors: { deploy: Deploy; error: Error }[] = [];
 
+    if (project.slaveServer) {
+      //Send information to slave server
+      return;
+    }
+
     const projectDir = path.join(
       project.path,
       this.githubService.getProjectDirectoryName(project.cloneLine),
