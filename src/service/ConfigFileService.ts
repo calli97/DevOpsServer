@@ -52,7 +52,7 @@ export class ConfigFileService {
     return (result.affected ?? 0) > 0;
   }
 
-  async writeFiles(project: Project): Promise<void> {
+  async writeFiles(project: Project, projectDir: string): Promise<void> {
     const configFiles = await this.findByProject(project.id);
 
     if (configFiles.length === 0) {
@@ -62,7 +62,7 @@ export class ConfigFileService {
     const missingDirectories: string[] = [];
 
     for (const configFile of configFiles) {
-      const dirPath = path.join(project.path, configFile.relativePath);
+      const dirPath = path.join(projectDir, configFile.relativePath);
 
       try {
         const stat = await fs.stat(dirPath);
@@ -82,7 +82,7 @@ export class ConfigFileService {
     }
 
     for (const configFile of configFiles) {
-      const filePath = path.join(project.path, configFile.relativePath, configFile.name);
+      const filePath = path.join(projectDir, configFile.relativePath, configFile.name);
       await fs.writeFile(filePath, configFile.content, "utf-8");
       logger.info(`[ConfigFileService] Written: ${filePath}`);
     }

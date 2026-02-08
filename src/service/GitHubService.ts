@@ -4,9 +4,9 @@ import config from "../config";
 import { logger } from "./LogService";
 
 export class GitHubService {
-  verifySignature(signature: string, body: any): boolean {
+  verifySignature(signature: string, rawBody: Buffer): boolean {
     const hmac = createHmac("sha1", config.githubWebhookSecret);
-    const digest = `sha1=${hmac.update(JSON.stringify(body)).digest("hex")}`;
+    const digest = `sha1=${hmac.update(rawBody).digest("hex")}`;
     return signature === digest;
   }
 
@@ -17,13 +17,11 @@ export class GitHubService {
 
   verifySignatureMiddleware = (
     signature: string,
-    body: any,
+    rawBody: Buffer,
     next: NextFunction,
     res: Response
   ) => {
-    logger.info("BODY:", body);
-
-    if (!this.verifySignature(signature, body)) {
+    if (!this.verifySignature(signature, rawBody)) {
       return res.status(401).json({ error: true, msg: "Invalid signature" });
     }
     next();

@@ -113,7 +113,7 @@ export class ProjectService {
     await execAsync(`git pull origin ${project.branch}`, { cwd: projectDir });
     await execAsync(`git switch ${project.branch}`, { cwd: projectDir });
 
-    await this.configFileService.writeFiles(project);
+    await this.configFileService.writeFiles(project, projectDir);
 
     for (const deploy of project.deploys) {
       try {
@@ -157,7 +157,7 @@ export class ProjectService {
 
     await execAsync(`git pull origin ${project.branch}`, { cwd: projectDir });
     await execAsync(`git switch ${project.branch}`, { cwd: projectDir });
-    await this.configFileService.writeFiles(project);
+    await this.configFileService.writeFiles(project, projectDir);
     for (const deploy of project.deploys) {
       try {
         const result = await this.deployService.restart(projectDir, deploy);
