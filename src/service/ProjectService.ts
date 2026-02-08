@@ -98,7 +98,15 @@ export class ProjectService {
     const started: Deploy[] = [];
     const errors: { deploy: Deploy; error: Error }[] = [];
 
-    const projectDir = path.join(project.path, this.githubService.getProjectDirectoryName(project.cloneLine));
+    if (project.slaveServer) {
+      //Send information to slave server
+      return;
+    }
+
+    const projectDir = path.join(
+      project.path,
+      this.githubService.getProjectDirectoryName(project.cloneLine),
+    );
 
     await execAsync(`git clone ${project.cloneLine}`, { cwd: project.path });
 
@@ -133,7 +141,10 @@ export class ProjectService {
     const restarted: Deploy[] = [];
     const errors: { deploy: Deploy; error: Error }[] = [];
 
-    const projectDir = path.join(project.path, this.githubService.getProjectDirectoryName(project.cloneLine));
+    const projectDir = path.join(
+      project.path,
+      this.githubService.getProjectDirectoryName(project.cloneLine),
+    );
 
     await execAsync(`git pull origin ${project.branch}`, { cwd: projectDir });
     await execAsync(`git switch ${project.branch}`, { cwd: projectDir });
