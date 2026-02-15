@@ -5,6 +5,7 @@ import helmet from "helmet";
 import { GitHubService } from "./service/GitHubService";
 import cors from "cors";
 import { logMiddleware } from "./middleware/logMiddleware";
+import { apiKeyMiddleware } from "./middleware/apiKeyMiddleware";
 import { logger } from "./service/LogService";
 
 const app = express();
@@ -28,8 +29,10 @@ app.use((req, res, next) => {
       return githubService.verifySignatureMiddleware(signature, (req as any).rawBody, next, res);
     }
   }
-  // Otherwise, apply CORS
-  cors()(req, res, next);
+  // Otherwise, apply CORS and API key validation
+  cors()(req, res, () => {
+    apiKeyMiddleware(req, res, next);
+  });
 });
 
 app.use("/", routes);

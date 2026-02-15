@@ -57,6 +57,7 @@ read -p "DB_NAME: " DB_NAME
 echo
 read -p "Puerto para el servidor (ej: 3040): " PORT
 read -p "GitHub Webhook Secret: " GITHUB_WEBHOOK_SECRET
+read -p "API Key: " API_KEY
 
 # --- CREAR ARCHIVO config.ts ---
 CONFIG_FILE="src/config.ts"
@@ -66,6 +67,7 @@ cat > $CONFIG_FILE <<EOF
 export default {
   port: $PORT,
   githubWebhookSecret: "$GITHUB_WEBHOOK_SECRET",
+  apiKey: "$API_KEY",
   database: {
     type: "$DB_TYPE",
     host: "$DB_HOST",
@@ -92,6 +94,11 @@ pm2 save
 
 echo
 echo "🧱 Configurando firewall para permitir el puerto $PORT..."
+
+if ! command -v ufw &> /dev/null; then
+  echo "🟢 Instalando UFW..."
+  sudo apt install -y ufw
+fi
 
 sudo ufw allow $PORT/tcp
 sudo ufw status verbose
