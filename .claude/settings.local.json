@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(mkdir -p MasterServer && git mv src install.bash package.json package-lock.json tsconfig.json README.md LICENSE MasterServer/ 2>&1 && echo \"git mv done\")",
+      "Bash(git mv:*)",
+      "Bash(git add:*)",
+      "Bash(git -C /c/Common/Proyects/CICD/DevOpsServer add /c/Common/Proyects/CICD/DevOpsServer/MasterServer/install.bash /c/Common/Proyects/CICD/DevOpsServer/MasterServer/package.json && echo done)",
+      "Bash(git -C /c/Common/Proyects/CICD/DevOpsServer status --short)"
     ]
   }
 }
