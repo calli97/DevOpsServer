@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DevOps API Client</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ── TOP BAR ─────────────────────────────────────── -->
+<header class="topbar">
+  <span class="topbar-title">⚙ DevOps API Client</span>
+  <span class="topbar-sep">|</span>
+  <div class="topbar-field" style="max-width:280px">
+    <label for="baseUrlInput">Base URL</label>
+    <input id="baseUrlInput" type="text" placeholder="http://localhost:3040" />
+  </div>
+  <div class="topbar-field">
+    <label for="apiKeyInput">API Key</label>
+    <div class="apikey-wrap">
+      <input id="apiKeyInput" type="password" placeholder="Enter your API key…" />
+      <button id="toggleApiKey" class="btn-icon" title="Toggle visibility">👁</button>
+    </div>
+  </div>
+</header>
+
+<!-- ── LAYOUT ───────────────────────────────────────── -->
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <span class="sidebar-section">Entities</span>
+    <button class="nav-btn active" data-tab="projects">📁 Projects</button>
+    <button class="nav-btn" data-tab="deploys">🚀 Deploys</button>
+    <button class="nav-btn" data-tab="config-files">📄 Config Files</button>
+    <button class="nav-btn" data-tab="slave-servers">🖥 Slave Servers</button>
+  </nav>
+
+  <!-- CONTENT -->
+  <main class="content">
+
+    <!-- ════════════════════════════════════════
+         PROJECTS
+    ════════════════════════════════════════ -->
+    <div id="tab-projects" class="tab-content active">
+      <div class="tab-title">Projects</div>
+
+      <!-- LIST ALL -->
+      <div class="card open">
+        <div class="card-header">
+          <span class="method GET">GET</span>
+          <span class="card-path">/projects</span>
+          <span class="card-label">List all</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <button class="send-btn" id="p-list-send">Send</button>
+          <div class="response-wrap" id="p-list-res">
+            <div class="response-header">
+              <span class="status-badge ok">200</span>
+              <span>Response</span>
+              <span class="response-time"></span>
+            </div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- GET BY ID -->
+      <div class="card">
+        <div class="card-header">
+          <span class="method GET">GET</span>
+          <span class="card-path">/projects/:id</span>
+          <span class="card-label">Get by ID</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <div class="fields single-col">
+            <div class="field">
+              <label>ID</label>
+              <input id="p-get-id" type="number" placeholder="1" />
+            </div>
+          </div>
+          <button class="send-btn" id="p-get-send">Send</button>
+          <div class="response-wrap" id="p-get-res">
+            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- CREATE -->
+      <div class="card">
+        <div class="card-header">
+          <span class="method POST">POST</span>
+          <span class="card-path">/projects</span>
+          <span class="card-label">Create</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <div class="fields">
+            <div class="field">
+              <label>name</label>
+              <input id="p-c-name" type="text" placeholder="my-project" />
+            </div>
+            <div class="field">
+              <label>path</label>
+              <input id="p-c-path" type="text" placeholder="/home/deploy" />
+            </div>
+            <div class="field">
+              <label>repository</label>
+              <input id="p-c-repo" type="text" placeholder="https://github.com/user/repo" />
+            </div>
+            <div class="field">
+              <label>branch</label>
+              <input id="p-c-branch" type="text" placeholder="main" />
+            </div>
+            <div class="field full">
+              <label>cloneLine</label>
+              <input id="p-c-clone" type="text" placeholder="git clone https://github.com/user/repo" />
+            </div>
+            <div class="field full">
+              <label>afterDeployCommands <span class="optional">optional</span></label>
+              <input id="p-c-after" type="text" placeholder="npm run migrate" />
+            </div>
+            <div class="field">
+              <div class="checkbox-row">
+                <input id="p-c-active" type="checkbox" checked />
+                <label for="p-c-active">active</label>
+              </div>
+            </div>
+            <div class="field">
+              <div class="checkbox-row">
+                <input id="p-c-auto" type="checkbox" />
+                <label for="p-c-auto">autoUpdate</label>
+              </div>
+            </div>
+            <div class="field full">
+              <label>slaveServer <span class="optional">optional — { "id": 1 } or full object</span></label>
+              <textarea id="p-c-slave" placeholder='{"id": 1}'></textarea>
+            </div>
+            <div class="field full">
+              <label>configFiles <span class="optional">optional — JSON array</span></label>
+              <textarea id="p-c-configs" placeholder='[{"name":".env","relativePath":".","content":"PORT=3000"}]'></textarea>
+            </div>
+            <div class="field full">
+              <label>deploys <span class="optional">optional — JSON array</span></label>
+              <textarea id="p-c-deploys" placeholder='[{"name":"api","startPath":"/","startCommands":"npm start"}]'></textarea>
+            </div>
+          </div>
+          <button class="send-btn" id="p-create-send">Send</button>
+          <div class="response-wrap" id="p-create-res">
+            <div class="response-header"><span class="status-badge ok">201</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- UPDATE -->
+      <div class="card">
+        <div class="card-header">
+          <span class="method PUT">PUT</span>
+          <span class="card-path">/projects/:id</span>
+          <span class="card-label">Update</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <div class="fields">
+            <div class="field">
+              <label>ID</label>
+              <input id="p-u-id" type="number" placeholder="1" />
+            </div>
+            <div class="field">
+              <label>name <span class="optional">optional</span></label>
+              <input id="p-u-name" type="text" />
+            </div>
+            <div class="field">
+              <label>path <span class="optional">optional</span></label>
+              <input id="p-u-path" type="text" />
+            </div>
+            <div class="field">
+              <label>repository <span class="optional">optional</span></label>
+              <input id="p-u-repo" type="text" />
+            </div>
+            <div class="field">
+              <label>branch <span class="optional">optional</span></label>
+              <input id="p-u-branch" type="text" />
+            </div>
+            <div class="field">
+              <label>cloneLine <span class="optional">optional</span></label>
+              <input id="p-u-clone" type="text" />
+            </div>
+            <div class="field">
+              <label>afterDeployCommands <span class="optional">optional</span></label>
+              <input id="p-u-after" type="text" />
+            </div>
+            <div class="field">
+              <div class="checkbox-row">
+                <input id="p-u-active" type="checkbox" checked />
+                <label for="p-u-active">active</label>
+              </div>
+            </div>
+            <div class="field">
+              <div class="checkbox-row">
+                <input id="p-u-auto" type="checkbox" />
+                <label for="p-u-auto">autoUpdate</label>
+              </div>
+            </div>
+            <div class="field full">
+              <label>slaveServer <span class="optional">optional</span></label>
+              <textarea id="p-u-slave" placeholder='{"id": 1}'></textarea>
+            </div>
+          </div>
+          <button class="send-btn" id="p-update-send">Send</button>
+          <div class="response-wrap" id="p-update-res">
+            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- DELETE -->
+      <div class="card">
+        <div class="card-header">
+          <span class="method DELETE">DELETE</span>
+          <span class="card-path">/projects/:id</span>
+          <span class="card-label">Delete</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <div class="fields single-col">
+            <div class="field">
+              <label>ID</label>
+              <input id="p-d-id" type="number" placeholder="1" />
+            </div>
+          </div>
+          <button class="send-btn" id="p-delete-send">Send</button>
+          <div class="response-wrap" id="p-delete-res">
+            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- START -->
+      <div class="card">
+        <div class="card-header">
+          <span class="method POST">POST</span>
+          <span class="card-path">/projects/:id/start</span>
+          <span class="card-label">Start deploys</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <div class="fields single-col">
+            <div class="field">
+              <label>Project ID</label>
+              <input id="p-start-id" type="number" placeholder="1" />
+            </div>
+          </div>
+          <button class="send-btn" id="p-start-send">Send</button>
+          <div class="response-wrap" id="p-start-res">
+            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- RESTART -->
+      <div class="card">
+        <div class="card-header">
+          <span class="method POST">POST</span>
+          <span class="card-path">/projects/:id/restart</span>
+          <span class="card-label">Restart deploys</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <div class="fields single-col">
+            <div class="field">
+              <label>Project ID</label>
+              <input id="p-restart-id" type="number" placeholder="1" />
+            </div>
+          </div>
+          <button class="send-btn" id="p-restart-send">Send</button>
+          <div class="response-wrap" id="p-restart-res">
+            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /tab-projects -->
+
+
+    <!-- ════════════════════════════════════════
+         DEPLOYS
+    ════════════════════════════════════════ -->
+    <div id="tab-deploys" class="tab-content">
+      <div class="tab-title">Deploys</div>
+
+      <!-- LIST ALL -->
+      <div class="card open">
+        <div class="card-header">
+          <span class="method GET">GET</span>
+          <span class="card-path">/deploys</span>
+          <span class="card-label">List all</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <button class="send-btn" id="d-list-send">Send</button>
+          <div class="response-wrap" id="d-list-res">
+            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- GET BY ID -->
+      <div class="card">
+        <div class="card-header">
+          <span class="method GET">GET</span>
+          <span class="card-path">/deploys/:id</span>
+          <span class="card-label">Get by ID</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <div class="fields single-col">
+            <div class="field"><label>ID</label><input id="d-get-id" type="number" placeholder="1" /></div>
+          </div>
+          <button class="send-btn" id="d-get-send">Send</button>
+          <div class="response-wrap" id="d-get-res">
+            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- CREATE -->
+      <div class="card">
+        <div class="card-header">
+          <span class="method POST">POST</span>
+          <span class="card-path">/deploys</span>
+          <span class="card-label">Create</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <div class="fields">
+            <div class="field">
+              <label>name</label>
+              <input id="d-c-name" type="text" placeholder="api" />
+            </div>
+            <div class="field">
+              <label>projectId</label>
+              <input id="d-c-projectId" type="number" placeholder="1" />
+            </div>
+            <div class="field">
+              <label>startPath</label>
+              <input id="d-c-startPath" type="text" placeholder="/" />
+            </div>
+            <div class="field">
+              <label>startCommands</label>
+              <input id="d-c-start" type="text" placeholder="npm run start:prod" />
+            </div>
+            <div class="field full">
+              <label>buildCommands <span class="optional">optional — JSON string array e.g. ["npm install","npm run build"]</span></label>
+              <input id="d-c-build" type="text" placeholder='["npm install","npm run build"]' />
+            </div>
+          </div>
+          <button class="send-btn" id="d-create-send">Send</button>
+          <div class="response-wrap" id="d-create-res">
+            <div class="response-header"><span class="status-badge ok">201</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- UPDATE -->
+      <div class="card">
+        <div class="card-header">
+          <span class="method PUT">PUT</span>
+          <span class="card-path">/deploys/:id</span>
+          <span class="card-label">Update</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <div class="fields">
+            <div class="field">
+              <label>ID</label>
+              <input id="d-u-id" type="number" placeholder="1" />
+            </div>
+            <div class="field">
+              <label>name <span class="optional">optional</span></label>
+              <input id="d-u-name" type="text" />
+            </div>
+            <div class="field">
+              <label>startPath <span class="optional">optional</span></label>
+              <input id="d-u-startPath" type="text" />
+            </div>
+            <div class="field">
+              <label>startCommands <span class="optional">optional</span></label>
+              <input id="d-u-start" type="text" />
+            </div>
+            <div class="field full">
+              <label>buildCommands <span class="optional">optional</span></label>
+              <input id="d-u-build" type="text" />
+            </div>
+          </div>
+          <button class="send-btn" id="d-update-send">Send</button>
+          <div class="response-wrap" id="d-update-res">
+            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- DELETE -->
+      <div class="card">
+        <div class="card-header">
+          <span class="method DELETE">DELETE</span>
+          <span class="card-path">/deploys/:id</span>
+          <span class="card-label">Delete</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <div class="fields single-col">
+            <div class="field"><label>ID</label><input id="d-d-id" type="number" placeholder="1" /></div>
+          </div>
+          <button class="send-btn" id="d-delete-send">Send</button>
+          <div class="response-wrap" id="d-delete-res">
+            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /tab-deploys -->
+
+
+    <!-- ════════════════════════════════════════
+         CONFIG FILES
+    ════════════════════════════════════════ -->
+    <div id="tab-config-files" class="tab-content">
+      <div class="tab-title">Config Files</div>
+
+      <!-- LIST ALL -->
+      <div class="card open">
+        <div class="card-header">
+          <span class="method GET">GET</span>
+          <span class="card-path">/config-files</span>
+          <span class="card-label">List all</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <button class="send-btn" id="cf-list-send">Send</button>
+          <div class="response-wrap" id="cf-list-res">
+            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- GET BY ID -->
+      <div class="card">
+        <div class="card-header">
+          <span class="method GET">GET</span>
+          <span class="card-path">/config-files/:id</span>
+          <span class="card-label">Get by ID</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <div class="fields single-col">
+            <div class="field"><label>ID</label><input id="cf-get-id" type="number" placeholder="1" /></div>
+          </div>
+          <button class="send-btn" id="cf-get-send">Send</button>
+          <div class="response-wrap" id="cf-get-res">
+            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- CREATE -->
+      <div class="card">
+        <div class="card-header">
+          <span class="method POST">POST</span>
+          <span class="card-path">/config-files</span>
+          <span class="card-label">Create</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <div class="fields">
+            <div class="field">
+              <label>name</label>
+              <input id="cf-c-name" type="text" placeholder=".env" />
+            </div>
+            <div class="field">
+              <label>projectId</label>
+              <input id="cf-c-projectId" type="number" placeholder="1" />
+            </div>
+            <div class="field full">
+              <label>relativePath <span class="optional">directory inside project</span></label>
+              <input id="cf-c-path" type="text" placeholder="." />
+            </div>
+            <div class="field full">
+              <label>content</label>
+              <textarea id="cf-c-content" style="min-height:100px" placeholder="PORT=3000&#10;NODE_ENV=production"></textarea>
+            </div>
+          </div>
+          <button class="send-btn" id="cf-create-send">Send</button>
+          <div class="response-wrap" id="cf-create-res">
+            <div class="response-header"><span class="status-badge ok">201</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- UPDATE -->
+      <div class="card">
+        <div class="card-header">
+          <span class="method PUT">PUT</span>
+          <span class="card-path">/config-files/:id</span>
+          <span class="card-label">Update</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <div class="fields">
+            <div class="field">
+              <label>ID</label>
+              <input id="cf-u-id" type="number" placeholder="1" />
+            </div>
+            <div class="field">
+              <label>name <span class="optional">optional</span></label>
+              <input id="cf-u-name" type="text" />
+            </div>
+            <div class="field full">
+              <label>relativePath <span class="optional">optional</span></label>
+              <input id="cf-u-path" type="text" />
+            </div>
+            <div class="field full">
+              <label>content <span class="optional">optional</span></label>
+              <textarea id="cf-u-content" style="min-height:80px"></textarea>
+            </div>
+          </div>
+          <button class="send-btn" id="cf-update-send">Send</button>
+          <div class="response-wrap" id="cf-update-res">
+            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- DELETE -->
+      <div class="card">
+        <div class="card-header">
+          <span class="method DELETE">DELETE</span>
+          <span class="card-path">/config-files/:id</span>
+          <span class="card-label">Delete</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <div class="fields single-col">
+            <div class="field"><label>ID</label><input id="cf-d-id" type="number" placeholder="1" /></div>
+          </div>
+          <button class="send-btn" id="cf-delete-send">Send</button>
+          <div class="response-wrap" id="cf-delete-res">
+            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /tab-config-files -->
+
+
+    <!-- ════════════════════════════════════════
+         SLAVE SERVERS
+    ════════════════════════════════════════ -->
+    <div id="tab-slave-servers" class="tab-content">
+      <div class="tab-title">Slave Servers</div>
+
+      <!-- LIST ALL -->
+      <div class="card open">
+        <div class="card-header">
+          <span class="method GET">GET</span>
+          <span class="card-path">/slave-servers</span>
+          <span class="card-label">List all</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <button class="send-btn" id="ss-list-send">Send</button>
+          <div class="response-wrap" id="ss-list-res">
+            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- GET BY ID -->
+      <div class="card">
+        <div class="card-header">
+          <span class="method GET">GET</span>
+          <span class="card-path">/slave-servers/:id</span>
+          <span class="card-label">Get by ID</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <div class="fields single-col">
+            <div class="field"><label>ID</label><input id="ss-get-id" type="number" placeholder="1" /></div>
+          </div>
+          <button class="send-btn" id="ss-get-send">Send</button>
+          <div class="response-wrap" id="ss-get-res">
+            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- CREATE -->
+      <div class="card">
+        <div class="card-header">
+          <span class="method POST">POST</span>
+          <span class="card-path">/slave-servers</span>
+          <span class="card-label">Create</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <div class="fields">
+            <div class="field">
+              <label>nombre</label>
+              <input id="ss-c-nombre" type="text" placeholder="slave-01" />
+            </div>
+            <div class="field">
+              <label>direccionIp</label>
+              <input id="ss-c-ip" type="text" placeholder="192.168.1.100" />
+            </div>
+            <div class="field">
+              <label>puerto</label>
+              <input id="ss-c-puerto" type="number" placeholder="3041" />
+            </div>
+            <div class="field">
+              <label>apiKey</label>
+              <input id="ss-c-apikey" type="text" placeholder="secret-key" />
+            </div>
+          </div>
+          <button class="send-btn" id="ss-create-send">Send</button>
+          <div class="response-wrap" id="ss-create-res">
+            <div class="response-header"><span class="status-badge ok">201</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- UPDATE -->
+      <div class="card">
+        <div class="card-header">
+          <span class="method PUT">PUT</span>
+          <span class="card-path">/slave-servers/:id</span>
+          <span class="card-label">Update</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <div class="fields">
+            <div class="field">
+              <label>ID</label>
+              <input id="ss-u-id" type="number" placeholder="1" />
+            </div>
+            <div class="field">
+              <label>nombre <span class="optional">optional</span></label>
+              <input id="ss-u-nombre" type="text" />
+            </div>
+            <div class="field">
+              <label>direccionIp <span class="optional">optional</span></label>
+              <input id="ss-u-ip" type="text" />
+            </div>
+            <div class="field">
+              <label>puerto <span class="optional">optional</span></label>
+              <input id="ss-u-puerto" type="number" />
+            </div>
+            <div class="field">
+              <label>apiKey <span class="optional">optional</span></label>
+              <input id="ss-u-apikey" type="text" />
+            </div>
+          </div>
+          <button class="send-btn" id="ss-update-send">Send</button>
+          <div class="response-wrap" id="ss-update-res">
+            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- DELETE -->
+      <div class="card">
+        <div class="card-header">
+          <span class="method DELETE">DELETE</span>
+          <span class="card-path">/slave-servers/:id</span>
+          <span class="card-label">Delete</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <div class="fields single-col">
+            <div class="field"><label>ID</label><input id="ss-d-id" type="number" placeholder="1" /></div>
+          </div>
+          <button class="send-btn" id="ss-delete-send">Send</button>
+          <div class="response-wrap" id="ss-delete-res">
+            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /tab-slave-servers -->
+
+  </main>
+</div><!-- /layout -->
+
+<script src="app.js"></script>
+</body>
+</html>
