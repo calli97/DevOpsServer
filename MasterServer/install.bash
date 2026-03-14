@@ -90,6 +90,7 @@ npm run build
 
 echo "🚀 Iniciando servidor con Node.js..."
 pm2 start "node ./dist/index.js" --name devops-server
+pm2 startup
 pm2 save
 
 echo
