@@ -6,8 +6,7 @@ import path from "path";
 export const dataSource = new DataSource({
   ...config.database,
   entities: [
-    path.join(__dirname, "/entity/**/*.ts"),
-    path.join(__dirname, "../entity/**/*.js"),
+    path.join(__dirname, "entity/**/*.js"),
   ],
   synchronize: true,
 } as DataSourceOptions);
