@@ -16,15 +16,17 @@ const githubService = new GitHubService();
 app.use(logMiddleware);
 app.use(helmet());
 
-app.use(express.json());
+app.use(
+  express.json({
+    verify: (req: any, _res, buf) => {
+      req.rawBody = buf;
+    },
+  })
+);
 app.use((req, res, next) => {
-  // Check that exist a signature and validate with the secret
   const signature = req.headers["x-hub-signature"] as string;
-  console.log("BODY: ", req.body);
-  if (signature) {
-    if (req.path == "/github/webhook") {
-      return githubService.verifyGithubSignture(signature, req.body, next, res);
-    }
+  if (signature && req.path === "/github/webhook") {
+    return githubService.verifyGithubSignture(signature, (req as any).rawBody, next, res);
   }
   // Otherwise, apply CORS and API key validation
   cors()(req, res, () => {

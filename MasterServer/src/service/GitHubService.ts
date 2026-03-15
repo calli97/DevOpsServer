@@ -29,12 +29,12 @@ export class GitHubService {
 
   verifyGithubSignture = (
     signature: string,
-    body: any,
+    rawBody: Buffer,
     next: NextFunction,
     res: Response,
   ) => {
     const hmac = createHmac("sha1", config.githubWebhookSecret);
-    const digest = `sha1=${hmac.update(JSON.stringify(body)).digest("hex")}`;
+    const digest = `sha1=${hmac.update(rawBody).digest("hex")}`;
 
     if (signature !== digest) {
       return res.status(401).json({ error: true, msg: "Invalid signature" });
