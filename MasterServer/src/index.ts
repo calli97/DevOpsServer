@@ -16,6 +16,7 @@ const githubService = new GitHubService();
 app.use(logMiddleware);
 app.use(helmet());
 
+app.use(express.json());
 app.use((req, res, next) => {
   // Check that exist a signature and validate with the secret
   const signature = req.headers["x-hub-signature"] as string;
@@ -30,7 +31,7 @@ app.use((req, res, next) => {
     apiKeyMiddleware(req, res, next);
   });
 });
-app.use(express.json());
+
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/", routes);
