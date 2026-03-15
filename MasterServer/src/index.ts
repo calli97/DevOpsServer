@@ -19,15 +19,10 @@ app.use(helmet());
 app.use((req, res, next) => {
   // Check that exist a signature and validate with the secret
   const signature = req.headers["x-hub-signature"] as string;
-  console.log("BODY: ", req);
+  console.log("BODY: ", req.body);
   if (signature) {
     if (req.path == "/github/webhook") {
-      return githubService.verifySignatureMiddleware(
-        signature,
-        req.body,
-        next,
-        res,
-      );
+      return githubService.verifyGithubSignture(signature, req.body, next, res);
     }
   }
   // Otherwise, apply CORS and API key validation
