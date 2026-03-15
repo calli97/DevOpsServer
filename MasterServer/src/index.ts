@@ -19,11 +19,12 @@ app.use(helmet());
 app.use((req, res, next) => {
   // Check that exist a signature and validate with the secret
   const signature = req.headers["x-hub-signature"] as string;
+  console.log("BODY: ", req);
   if (signature) {
     if (req.path == "/github/webhook") {
       return githubService.verifySignatureMiddleware(
         signature,
-        (req as any).rawBody,
+        req.body,
         next,
         res,
       );
@@ -34,13 +35,7 @@ app.use((req, res, next) => {
     apiKeyMiddleware(req, res, next);
   });
 });
-app.use(
-  express.json({
-    verify: (req, _res, buf) => {
-      (req as any).rawBody = buf;
-    },
-  }),
-);
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/", routes);
