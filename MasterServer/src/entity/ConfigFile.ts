@@ -1,5 +1,5 @@
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
-import Project from "./Project";
+import ProjectInstance from "./ProjectInstance";
 
 @Entity()
 class ConfigFile {
@@ -15,8 +15,8 @@ class ConfigFile {
   @Column({ type: "text", nullable: false })
   content: string;
 
-  @ManyToOne(() => Project, (project) => project.configFiles, { nullable: false })
-  project: Project;
+  @ManyToOne(() => ProjectInstance, (instance) => instance.configFiles, { nullable: false })
+  projectInstance: ProjectInstance;
 }
 
 export default ConfigFile;

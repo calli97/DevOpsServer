@@ -1,5 +1,5 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
-import Project from "./Project";
+import ProjectInstance from "./ProjectInstance";
 
 @Entity()
 class SlaveServer {
@@ -18,8 +18,8 @@ class SlaveServer {
   @Column({ nullable: false })
   apiKey: string;
 
-  @OneToMany(() => Project, (project) => project.slaveServer)
-  projects: Project[];
+  @OneToMany(() => ProjectInstance, (instance) => instance.slaveServer)
+  instances: ProjectInstance[];
 }
 
 export default SlaveServer;

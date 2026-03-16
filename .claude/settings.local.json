@@ -8,7 +8,8 @@
       "Bash(git -C /c/Common/Proyects/CICD/DevOpsServer add /c/Common/Proyects/CICD/DevOpsServer/MasterServer/install.bash /c/Common/Proyects/CICD/DevOpsServer/MasterServer/package.json && echo done)",
       "Bash(git -C /c/Common/Proyects/CICD/DevOpsServer status --short)",
       "Bash(find /c/Common/Proyects/CICD/DevOpsServer/MasterServer/src -type f \\\\\\( -name \"*.ts\" -o -name \"*.js\" \\\\\\) 2>/dev/null | grep -v node_modules)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(find:*)"
     ]
   }
 }

@@ -1,5 +1,5 @@
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
-import Project from "./Project";
+import ProjectInstance from "./ProjectInstance";
 
 @Entity()
 class Deploy {
@@ -18,8 +18,8 @@ class Deploy {
   @Column({ nullable: false })
   startCommands: string;
 
-  @ManyToOne(() => Project, (project) => project.deploys, { nullable: false })
-  project: Project;
+  @ManyToOne(() => ProjectInstance, (instance) => instance.deploys, { nullable: false })
+  projectInstance: ProjectInstance;
 }
 
 export default Deploy;
