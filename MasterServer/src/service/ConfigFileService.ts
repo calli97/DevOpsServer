@@ -1,7 +1,7 @@
 import * as fs from "fs/promises";
 import * as path from "path";
 import ConfigFile from "../entity/ConfigFile";
-import Project from "../entity/Project";
+import ProjectInstance from "../entity/ProjectInstance";
 import { getRepository } from "../dbConnection";
 import { ConfigFileError, NotFoundError } from "../errors/AppError";
 import { logger } from "./LogService";
@@ -9,22 +9,22 @@ import { logger } from "./LogService";
 export class ConfigFileService {
   async findAll(): Promise<ConfigFile[]> {
     const repository = await getRepository(ConfigFile);
-    return repository.find({ relations: { project: true } });
+    return repository.find({ relations: { projectInstance: true } });
   }
 
   async findById(id: number): Promise<ConfigFile | null> {
     const repository = await getRepository(ConfigFile);
     return repository.findOne({
       where: { id },
-      relations: { project: true },
+      relations: { projectInstance: true },
     });
   }
 
-  async findByProject(projectId: number): Promise<ConfigFile[]> {
+  async findByProjectInstance(instanceId: number): Promise<ConfigFile[]> {
     const repository = await getRepository(ConfigFile);
     return repository.find({
-      where: { project: { id: projectId } },
-      relations: { project: true },
+      where: { projectInstance: { id: instanceId } },
+      relations: { projectInstance: true },
     });
   }
 
@@ -52,8 +52,8 @@ export class ConfigFileService {
     return (result.affected ?? 0) > 0;
   }
 
-  async writeFiles(project: Project, projectDir: string): Promise<void> {
-    const configFiles = await this.findByProject(project.id);
+  async writeFilesForInstance(instance: ProjectInstance, projectDir: string): Promise<void> {
+    const configFiles = await this.findByProjectInstance(instance.id);
 
     if (configFiles.length === 0) {
       return;

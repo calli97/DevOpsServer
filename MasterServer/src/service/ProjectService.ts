@@ -1,34 +1,34 @@
 import { Repository } from "typeorm";
 import Project from "../entity/Project";
-import Deploy from "../entity/Deploy";
-import { DeployService } from "./DeployService";
-import { ConfigFileService } from "./ConfigFileService";
 import { NotFoundError } from "../errors/AppError";
-import { promisify } from "util";
-import { exec } from "child_process";
-import path from "path";
-import { GitHubService } from "./GitHubService";
-
-const execAsync = promisify(exec);
 
 export class ProjectService {
   constructor(
     private readonly projectRepository: Repository<Project>,
-    private readonly deployService: DeployService,
-    private readonly configFileService: ConfigFileService,
-    private readonly githubService: GitHubService,
   ) {}
 
   async findAll(): Promise<Project[]> {
     return this.projectRepository.find({
-      relations: { deploys: true },
+      relations: {
+        instances: {
+          deploys: true,
+          configFiles: true,
+          slaveServer: true,
+        },
+      },
     });
   }
 
   async findById(id: number): Promise<Project> {
     const project = await this.projectRepository.findOne({
       where: { id },
-      relations: { configFiles: true, deploys: true, slaveServer: true },
+      relations: {
+        instances: {
+          deploys: true,
+          configFiles: true,
+          slaveServer: true,
+        },
+      },
     });
 
     if (!project) {
@@ -41,7 +41,13 @@ export class ProjectService {
   async findByName(name: string): Promise<Project | null> {
     return this.projectRepository.findOne({
       where: { name },
-      relations: { configFiles: true, deploys: true, slaveServer: true },
+      relations: {
+        instances: {
+          deploys: true,
+          configFiles: true,
+          slaveServer: true,
+        },
+      },
     });
   }
 
@@ -50,8 +56,17 @@ export class ProjectService {
     branch: string,
   ): Promise<Project[]> {
     return this.projectRepository.find({
-      where: { repository: repo, branch },
-      relations: { deploys: true },
+      where: {
+        repository: repo,
+        instances: { branch },
+      },
+      relations: {
+        instances: {
+          deploys: true,
+          configFiles: true,
+          slaveServer: true,
+        },
+      },
     });
   }
 
@@ -61,10 +76,7 @@ export class ProjectService {
   }
 
   async updateById(id: number, data: Partial<Project>): Promise<Project> {
-    const project = await this.projectRepository.findOne({
-      where: { id },
-      relations: { configFiles: true, deploys: true, slaveServer: true },
-    });
+    const project = await this.projectRepository.findOne({ where: { id } });
 
     if (!project) {
       throw new NotFoundError("Project", id);
@@ -75,110 +87,7 @@ export class ProjectService {
   }
 
   async delete(id: number): Promise<boolean> {
-    const project = await this.projectRepository.findOne({
-      where: { id },
-      relations: { deploys: true },
-    });
-
-    if (!project) {
-      return false;
-    }
-
-    for (const deploy of project.deploys) {
-      await this.deployService.delete(deploy.id);
-    }
-
     const result = await this.projectRepository.delete(id);
     return (result.affected ?? 0) > 0;
-  }
-
-  async startDeploys(
-    project: Project,
-  ): Promise<{ deploy: Deploy; error: Error }[]> {
-    const started: Deploy[] = [];
-    const errors: { deploy: Deploy; error: Error }[] = [];
-
-    if (project.slaveServer) {
-      //Send information to slave server
-      return;
-    }
-
-    const projectDir = path.join(
-      project.path,
-      this.githubService.getProjectDirectoryName(project.cloneLine),
-    );
-
-    await execAsync(`git clone ${project.cloneLine}`, { cwd: project.path });
-
-    await execAsync(`git pull origin ${project.branch}`, { cwd: projectDir });
-    await execAsync(`git switch ${project.branch}`, { cwd: projectDir });
-
-    await this.configFileService.writeFiles(project, projectDir);
-
-    for (const deploy of project.deploys) {
-      try {
-        const result = await this.deployService.start(projectDir, deploy);
-        if (result.stderr) {
-          errors.push({ deploy, error: new Error(result.stderr) });
-        } else {
-          started.push(deploy);
-        }
-      } catch (error) {
-        errors.push({ deploy, error: error as Error });
-      }
-    }
-
-    if (errors.length > 0) {
-      for (const deploy of started) {
-        try {
-          await this.deployService.stop(projectDir, deploy);
-        } catch {}
-      }
-    }
-
-    return errors;
-  }
-
-  async restartDeploys(
-    project: Project,
-  ): Promise<{ deploy: Deploy; error: Error }[]> {
-    const restarted: Deploy[] = [];
-    const errors: { deploy: Deploy; error: Error }[] = [];
-
-    if (project.slaveServer) {
-      //Send information to slave server
-      return;
-    }
-
-    const projectDir = path.join(
-      project.path,
-      this.githubService.getProjectDirectoryName(project.cloneLine),
-    );
-
-    await execAsync(`git pull origin ${project.branch}`, { cwd: projectDir });
-    await execAsync(`git switch ${project.branch}`, { cwd: projectDir });
-    await this.configFileService.writeFiles(project, projectDir);
-    for (const deploy of project.deploys) {
-      try {
-        const result = await this.deployService.restart(projectDir, deploy);
-        if (result.stderr) {
-          errors.push({ deploy, error: new Error(result.stderr) });
-        } else {
-          restarted.push(deploy);
-        }
-      } catch (error) {
-        errors.push({ deploy, error: error as Error });
-      }
-    }
-
-    if (errors.length > 0) {
-      for (const deploy of restarted) {
-        try {
-          await this.deployService.stop(projectDir, deploy);
-        } catch {}
-      }
-    }
-
-    return errors;
   }
 }
