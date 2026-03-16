@@ -8,6 +8,8 @@ import slaveServers from "./slave-servers";
 
 const routes = Router();
 
+routes.get("/status", (req, res) => res.status(200).json({ ok: true }));
+
 routes.use("/github", github);
 routes.use("/projects", projects);
 routes.use("/project-instances", projectInstances);
