@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { ConfigFileService } from "../service/ConfigFileService";
 import { logger } from "../service/LogService";
+import ProjectInstance from "../entity/ProjectInstance";
 
 export class ConfigFileController {
   constructor(private configFileService: ConfigFileService) {}
@@ -33,10 +34,10 @@ export class ConfigFileController {
 
   create = async (req: Request, res: Response) => {
     try {
-      const { projectId, ...rest } = req.body;
+      const { projectInstanceId, ...rest } = req.body;
       const configFile = await this.configFileService.create({
         ...rest,
-        project: { id: projectId } as any,
+        projectInstance: { id: projectInstanceId } as ProjectInstance,
       });
       return res.status(201).json({ ok: true, data: configFile });
     } catch (error) {
@@ -48,7 +49,12 @@ export class ConfigFileController {
   update = async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const configFile = await this.configFileService.update(Number(id), req.body);
+      const { name, relativePath, content } = req.body;
+      const configFile = await this.configFileService.update(Number(id), {
+        name,
+        relativePath,
+        content,
+      });
       return res.status(200).json({ ok: true, data: configFile });
     } catch (error) {
       if (error.statusCode === 404) {

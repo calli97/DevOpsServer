@@ -15,9 +15,6 @@ class Project {
   @Column({ nullable: false })
   cloneLine: string;
 
-  @Column({ nullable: false, default: true })
-  active: boolean;
-
   @OneToMany(() => ProjectInstance, (instance) => instance.project, {
     cascade: true,
   })

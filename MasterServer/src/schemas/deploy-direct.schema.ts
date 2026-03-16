@@ -5,7 +5,7 @@ export const createDeployDirectSchema = z.object({
   startPath: z.string().min(1, "startPath is required"),
   buildCommands: z.string().nullable().optional(),
   startCommands: z.string().min(1, "startCommands is required"),
-  projectId: z.number().int().positive("projectId must be a positive integer"),
+  projectInstanceId: z.number().int().positive("projectInstanceId must be a positive integer"),
 });
 
 export const updateDeployDirectSchema = z.object({

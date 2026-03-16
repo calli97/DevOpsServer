@@ -21,7 +21,12 @@ export class ProjectInstanceService {
   async findAll(): Promise<ProjectInstance[]> {
     const repository = await getRepository(ProjectInstance);
     return repository.find({
-      relations: { project: true, slaveServer: true, configFiles: true, deploys: true },
+      relations: {
+        project: true,
+        slaveServer: true,
+        configFiles: true,
+        deploys: true,
+      },
     });
   }
 
@@ -29,7 +34,12 @@ export class ProjectInstanceService {
     const repository = await getRepository(ProjectInstance);
     const instance = await repository.findOne({
       where: { id },
-      relations: { project: true, slaveServer: true, configFiles: true, deploys: true },
+      relations: {
+        project: true,
+        slaveServer: true,
+        configFiles: true,
+        deploys: true,
+      },
     });
 
     if (!instance) {
@@ -43,7 +53,12 @@ export class ProjectInstanceService {
     const repository = await getRepository(ProjectInstance);
     return repository.find({
       where: { project: { id: projectId } },
-      relations: { project: true, slaveServer: true, configFiles: true, deploys: true },
+      relations: {
+        project: true,
+        slaveServer: true,
+        configFiles: true,
+        deploys: true,
+      },
     });
   }
 
@@ -53,7 +68,10 @@ export class ProjectInstanceService {
     return repository.save(instance);
   }
 
-  async updateById(id: number, data: Partial<ProjectInstance>): Promise<ProjectInstance> {
+  async updateById(
+    id: number,
+    data: Partial<ProjectInstance>,
+  ): Promise<ProjectInstance> {
     const repository = await getRepository(ProjectInstance);
     const instance = await repository.findOne({ where: { id } });
 
@@ -87,7 +105,9 @@ export class ProjectInstanceService {
       this.githubService.getProjectDirectoryName(instance.project.cloneLine),
     );
 
-    await execAsync(`git clone ${instance.project.cloneLine}`, { cwd: instance.path });
+    await execAsync(`git clone ${instance.project.cloneLine}`, {
+      cwd: instance.path,
+    });
     await execAsync(`git pull origin ${instance.branch}`, { cwd: instanceDir });
     await execAsync(`git switch ${instance.branch}`, { cwd: instanceDir });
 
@@ -160,5 +180,17 @@ export class ProjectInstanceService {
     }
 
     return errors;
+  }
+  async getByRepositoryNameAndBranch(repositoryName: string, branch: string) {
+    const repository = await getRepository(ProjectInstance);
+    const instances = await repository.find({
+      where: {
+        branch: branch,
+        project: {
+          repository: repositoryName,
+        },
+      },
+    });
+    return instances;
   }
 }

@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { DeployService } from "../service/DeployService";
 import { logger } from "../service/LogService";
+import ProjectInstance from "../entity/ProjectInstance";
 
 export class DeployController {
   constructor(private deployService: DeployService) {}
@@ -33,10 +34,10 @@ export class DeployController {
 
   create = async (req: Request, res: Response) => {
     try {
-      const { projectId, ...rest } = req.body;
+      const { projectInstanceId, ...rest } = req.body;
       const deploy = await this.deployService.create({
         ...rest,
-        project: { id: projectId } as any,
+        projectInstance: { id: projectInstanceId } as ProjectInstance,
       });
       return res.status(201).json({ ok: true, data: deploy });
     } catch (error) {
@@ -48,7 +49,13 @@ export class DeployController {
   update = async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const deploy = await this.deployService.updateById(Number(id), req.body);
+      const { name, startPath, buildCommands, startCommands } = req.body;
+      const deploy = await this.deployService.updateById(Number(id), {
+        name,
+        startPath,
+        buildCommands,
+        startCommands,
+      });
 
       if (!deploy) {
         return res.status(404).json({ ok: false, error: `Deploy with id '${id}' not found` });

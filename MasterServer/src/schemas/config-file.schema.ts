@@ -4,7 +4,7 @@ export const createConfigFileSchema = z.object({
   name: z.string().min(1, "name is required"),
   relativePath: z.string().min(1, "relativePath is required"),
   content: z.string().min(1, "content is required"),
-  projectId: z.number().int().positive("projectId must be a positive integer"),
+  projectInstanceId: z.number().int().positive("projectInstanceId must be a positive integer"),
 });
 
 export const updateConfigFileSchema = z.object({
