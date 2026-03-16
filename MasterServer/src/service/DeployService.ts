@@ -3,6 +3,7 @@ import { exec } from "child_process";
 import { Repository } from "typeorm";
 import Deploy from "../entity/Deploy";
 import PM2Service from "./PM2Service";
+import { GitHubService } from "./GitHubService";
 import { logger } from "./LogService";
 import path from "path";
 
@@ -12,6 +13,7 @@ export class DeployService {
   constructor(
     private readonly deployRepository: Repository<Deploy>,
     private readonly pm2Service: PM2Service,
+    private readonly githubService: GitHubService,
   ) {}
 
   async findAll(): Promise<Deploy[]> {
@@ -115,6 +117,55 @@ export class DeployService {
       deploy.name,
       path.join(projectPath, deploy.startPath),
     );
+  }
+
+  private getInstanceDir(deploy: Deploy): string {
+    const repoDir = this.githubService.getProjectDirectoryName(
+      deploy.projectInstance.project.cloneLine,
+    );
+    return path.join(deploy.projectInstance.path, repoDir);
+  }
+
+  async startOrRestart(id: number): Promise<Deploy> {
+    const deploy = await this.deployRepository.findOne({
+      where: { id },
+      relations: { projectInstance: { project: true } },
+    });
+
+    if (!deploy) {
+      return null;
+    }
+
+    const instanceDir = this.getInstanceDir(deploy);
+    let result: { stdout: string; stderr: string };
+
+    if (!deploy.started) {
+      result = await this.start(instanceDir, deploy);
+    } else {
+      result = await this.restart(instanceDir, deploy);
+    }
+
+    if (result.stderr) {
+      throw new Error(result.stderr);
+    }
+
+    deploy.started = true;
+    return this.deployRepository.save(deploy);
+  }
+
+  async stopById(id: number): Promise<Deploy | null> {
+    const deploy = await this.deployRepository.findOne({
+      where: { id },
+      relations: { projectInstance: { project: true } },
+    });
+
+    if (!deploy) {
+      return null;
+    }
+
+    const instanceDir = this.getInstanceDir(deploy);
+    await this.stop(instanceDir, deploy);
+    return deploy;
   }
 
   // async runDeploy(deploy: Deploy): Promise<void> {

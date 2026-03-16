@@ -18,6 +18,9 @@ class Deploy {
   @Column({ nullable: false })
   startCommands: string;
 
+  @Column({ nullable: false, default: false })
+  started: boolean;
+
   @ManyToOne(() => ProjectInstance, (instance) => instance.deploys, { nullable: false })
   projectInstance: ProjectInstance;
 }

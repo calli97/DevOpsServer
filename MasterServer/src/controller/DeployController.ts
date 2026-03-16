@@ -83,4 +83,36 @@ export class DeployController {
       return res.status(500).json({ ok: false, error: error.message });
     }
   };
+
+  startDeploy = async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const deploy = await this.deployService.startOrRestart(Number(id));
+
+      if (!deploy) {
+        return res.status(404).json({ ok: false, error: `Deploy with id '${id}' not found` });
+      }
+
+      return res.status(200).json({ ok: true, data: deploy });
+    } catch (error) {
+      logger.error("[DeployController] Error starting deploy:", error);
+      return res.status(500).json({ ok: false, error: error.message });
+    }
+  };
+
+  stopDeploy = async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const deploy = await this.deployService.stopById(Number(id));
+
+      if (!deploy) {
+        return res.status(404).json({ ok: false, error: `Deploy with id '${id}' not found` });
+      }
+
+      return res.status(200).json({ ok: true, data: deploy });
+    } catch (error) {
+      logger.error("[DeployController] Error stopping deploy:", error);
+      return res.status(500).json({ ok: false, error: error.message });
+    }
+  };
 }

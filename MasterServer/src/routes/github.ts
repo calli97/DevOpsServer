@@ -16,7 +16,7 @@ async function getController() {
   if (!controller) {
     const deployRepository = await getRepository(Deploy);
     const pm2Service = new PM2Service();
-    const deployService = new DeployService(deployRepository, pm2Service);
+    const deployService = new DeployService(deployRepository, pm2Service, githubService);
     const configFileService = new ConfigFileService();
     const githubService = new GitHubService();
     const projectInstanceService = new ProjectInstanceService(deployService, configFileService, githubService);
