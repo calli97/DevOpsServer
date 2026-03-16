@@ -131,6 +131,85 @@ async function send(method, pathTpl, pathFields, bodyFields, wrapId) {
 // ════════════════════════════════════════════════════════════════
 // PROJECTS
 // ════════════════════════════════════════════════════════════════
+
+function createDeployItem() {
+  const div = document.createElement('div');
+  div.className = 'array-item';
+  div.innerHTML = `
+    <div class="array-item-header">
+      <span class="array-item-title">Deploy</span>
+      <button type="button" class="remove-btn">✕</button>
+    </div>
+    <div class="fields">
+      <div class="field">
+        <label>name</label>
+        <input type="text" placeholder="api" data-field="name" />
+      </div>
+      <div class="field">
+        <label>startPath</label>
+        <input type="text" placeholder="/" data-field="startPath" />
+      </div>
+      <div class="field full">
+        <label>startCommands</label>
+        <input type="text" placeholder="npm run start:prod" data-field="startCommands" />
+      </div>
+      <div class="field full">
+        <label>buildCommands <span class="optional">one per line</span></label>
+        <textarea data-field="buildCommands" placeholder="npm install&#10;npm run build"></textarea>
+      </div>
+    </div>
+  `;
+  div.querySelector('.remove-btn').onclick = () => div.remove();
+  return div;
+}
+
+function createConfigFileItem() {
+  const div = document.createElement('div');
+  div.className = 'array-item';
+  div.innerHTML = `
+    <div class="array-item-header">
+      <span class="array-item-title">Config File</span>
+      <button type="button" class="remove-btn">✕</button>
+    </div>
+    <div class="fields">
+      <div class="field">
+        <label>name</label>
+        <input type="text" placeholder=".env" data-field="name" />
+      </div>
+      <div class="field">
+        <label>relativePath</label>
+        <input type="text" placeholder="." data-field="relativePath" />
+      </div>
+      <div class="field full">
+        <label>content</label>
+        <textarea data-field="content" style="min-height:80px" placeholder="PORT=3000&#10;NODE_ENV=production"></textarea>
+      </div>
+    </div>
+  `;
+  div.querySelector('.remove-btn').onclick = () => div.remove();
+  return div;
+}
+
+function readArrayItems(listId, fieldNames) {
+  const items = [];
+  for (const item of document.getElementById(listId).children) {
+    const obj = {};
+    for (const field of fieldNames) {
+      const el = item.querySelector(`[data-field="${field}"]`);
+      if (!el) continue;
+      const v = el.value.trim();
+      if (field === 'buildCommands') {
+        const lines = v.split('\n').map(l => l.trim()).filter(Boolean);
+        if (lines.length) obj[field] = lines;
+      } else if (v) {
+        obj[field] = v;
+      }
+    }
+    items.push(obj);
+  }
+  return items;
+}
+
 function projectsHandlers() {
 
   // LIST ALL
@@ -143,21 +222,41 @@ function projectsHandlers() {
   document.getElementById('p-get-send').onclick = () =>
     send('GET', '/projects/:id', [['id','p-get-id']], null, 'p-get-res');
 
+  // ADD DEPLOY / CONFIG FILE
+  document.getElementById('p-c-add-deploy').onclick = () =>
+    document.getElementById('p-c-deploys-list').appendChild(createDeployItem());
+
+  document.getElementById('p-c-add-config').onclick = () =>
+    document.getElementById('p-c-configs-list').appendChild(createConfigFileItem());
+
   // CREATE
-  document.getElementById('p-create-send').onclick = () =>
-    send('POST', '/projects', [], [
-      ['name',                'p-c-name'],
-      ['path',                'p-c-path'],
-      ['repository',          'p-c-repo'],
-      ['branch',              'p-c-branch'],
-      ['cloneLine',           'p-c-clone'],
-      ['afterDeployCommands', 'p-c-after'],
-      ['active',              'p-c-active',  'bool'],
-      ['autoUpdate',          'p-c-auto',    'bool'],
-      ['slaveServer',         'p-c-slave',   'json'],
-      ['configFiles',         'p-c-configs', 'json'],
-      ['deploys',             'p-c-deploys', 'json'],
-    ], 'p-create-res');
+  document.getElementById('p-create-send').onclick = async () => {
+    const wrap = document.getElementById('p-create-res');
+    const btn  = document.getElementById('p-create-send');
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+    try {
+      const body = bodyOf([
+        ['name',                'p-c-name'],
+        ['path',                'p-c-path'],
+        ['repository',          'p-c-repo'],
+        ['branch',              'p-c-branch'],
+        ['cloneLine',           'p-c-clone'],
+        ['afterDeployCommands', 'p-c-after'],
+        ['active',              'p-c-active', 'bool'],
+        ['autoUpdate',          'p-c-auto',   'bool'],
+        ['slaveServer',         'p-c-slave',  'json'],
+      ]);
+      body.deploys     = readArrayItems('p-c-deploys-list',  ['name', 'startPath', 'startCommands', 'buildCommands']);
+      body.configFiles = readArrayItems('p-c-configs-list', ['name', 'relativePath', 'content']);
+      const { status, data, ms } = await apiRequest('POST', '/projects', body);
+      showResponse(wrap, status, data, ms);
+    } catch (e) { /* parseJson already alerted */ }
+    finally {
+      btn.disabled = false;
+      btn.textContent = 'Send';
+    }
+  };
 
   // UPDATE
   document.getElementById('p-update-send').onclick = () =>

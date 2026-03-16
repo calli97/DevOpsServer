@@ -141,12 +141,18 @@
               <textarea id="p-c-slave" placeholder='{"id": 1}'></textarea>
             </div>
             <div class="field full">
-              <label>configFiles <span class="optional">optional — JSON array</span></label>
-              <textarea id="p-c-configs" placeholder='[{"name":".env","relativePath":".","content":"PORT=3000"}]'></textarea>
+              <div class="array-header">
+                <label>configFiles <span class="optional">optional</span></label>
+                <button type="button" class="add-btn" id="p-c-add-config">+ Add Config File</button>
+              </div>
+              <div id="p-c-configs-list" class="array-list"></div>
             </div>
             <div class="field full">
-              <label>deploys <span class="optional">optional — JSON array</span></label>
-              <textarea id="p-c-deploys" placeholder='[{"name":"api","startPath":"/","startCommands":"npm start"}]'></textarea>
+              <div class="array-header">
+                <label>deploys <span class="optional">optional</span></label>
+                <button type="button" class="add-btn" id="p-c-add-deploy">+ Add Deploy</button>
+              </div>
+              <div id="p-c-deploys-list" class="array-list"></div>
             </div>
           </div>
           <button class="send-btn" id="p-create-send">Send</button>
