@@ -8,6 +8,7 @@ import { NotFoundError } from "../errors/AppError";
 import { DeployService } from "./DeployService";
 import { ConfigFileService } from "./ConfigFileService";
 import { GitHubService } from "./GitHubService";
+import { logger } from "./LogService";
 
 const execAsync = promisify(exec);
 
@@ -62,10 +63,28 @@ export class ProjectInstanceService {
     });
   }
 
+  private async tryClone(instance: ProjectInstance): Promise<ProjectInstance> {
+    const repository = await getRepository(ProjectInstance);
+    const full = await repository.findOne({
+      where: { id: instance.id },
+      relations: { project: true },
+    });
+
+    try {
+      await execAsync(`git clone ${full.project.cloneLine}`, { cwd: full.path });
+      full.cloned = true;
+      return repository.save(full);
+    } catch (error) {
+      logger.warning(`[ProjectInstanceService] Failed to clone repo for instance ${full.id}:`, error);
+      return full;
+    }
+  }
+
   async create(data: Partial<ProjectInstance>): Promise<ProjectInstance> {
     const repository = await getRepository(ProjectInstance);
     const instance = repository.create(data);
-    return repository.save(instance);
+    const saved = await repository.save(instance);
+    return this.tryClone(saved);
   }
 
   async updateById(
@@ -80,7 +99,13 @@ export class ProjectInstanceService {
     }
 
     Object.assign(instance, data);
-    return repository.save(instance);
+    const saved = await repository.save(instance);
+
+    if (!saved.cloned) {
+      return this.tryClone(saved);
+    }
+
+    return saved;
   }
 
   async delete(id: number): Promise<boolean> {
@@ -105,9 +130,6 @@ export class ProjectInstanceService {
       this.githubService.getProjectDirectoryName(instance.project.cloneLine),
     );
 
-    await execAsync(`git clone ${instance.project.cloneLine}`, {
-      cwd: instance.path,
-    });
     await execAsync(`git pull origin ${instance.branch}`, { cwd: instanceDir });
     await execAsync(`git switch ${instance.branch}`, { cwd: instanceDir });
 

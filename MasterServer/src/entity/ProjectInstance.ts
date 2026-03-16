@@ -27,6 +27,9 @@ class ProjectInstance {
   @Column({ nullable: false, default: false })
   autoUpdate: boolean;
 
+  @Column({ nullable: false, default: false })
+  cloned: boolean;
+
   @Column({ type: "text", nullable: true })
   afterDeployCommands: string;
 

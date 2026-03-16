@@ -39,7 +39,13 @@ export class ProjectInstanceController {
         project: { id: projectId } as Project,
         slaveServer: slaveServerId ? ({ id: slaveServerId } as SlaveServer) : null,
       });
-      return res.status(201).json({ ok: true, data: instance });
+
+      const response: Record<string, any> = { ok: true, data: instance };
+      if (!instance.cloned) {
+        response.warning = "Failed to clone repository. You can retry by updating the instance.";
+      }
+
+      return res.status(201).json(response);
     } catch (error) {
       logger.error("[ProjectInstanceController] Error creating instance:", error);
       return res.status(500).json({ ok: false, error: error.message });
@@ -58,7 +64,13 @@ export class ProjectInstanceController {
       }
 
       const instance = await this.projectInstanceService.updateById(Number(id), data);
-      return res.status(200).json({ ok: true, data: instance });
+
+      const response: Record<string, any> = { ok: true, data: instance };
+      if (!instance.cloned) {
+        response.warning = "Failed to clone repository. You can retry by updating the instance.";
+      }
+
+      return res.status(200).json(response);
     } catch (error) {
       if (error.statusCode === 404) {
         return res.status(404).json({ ok: false, error: error.message });
