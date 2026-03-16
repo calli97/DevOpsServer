@@ -84,20 +84,12 @@ function val(id) { return document.getElementById(id)?.value?.trim() || ''; }
 function num(id) { const v = val(id); return v ? Number(v) : undefined; }
 function chk(id) { return document.getElementById(id)?.checked; }
 
-function parseJson(id) {
-  const v = val(id);
-  if (!v) return undefined;
-  try { return JSON.parse(v); }
-  catch { alert(`Invalid JSON in field: ${id}`); throw new Error('bad json'); }
-}
-
 function bodyOf(fields) {
   const body = {};
   for (const [k, id, type] of fields) {
-    if (type === 'number')  { const v = num(id);       if (v !== undefined) body[k] = v; }
+    if (type === 'number')  { const v = num(id);  if (v !== undefined) body[k] = v; }
     else if (type === 'bool')   { body[k] = chk(id); }
-    else if (type === 'json')   { const v = parseJson(id); if (v !== undefined) body[k] = v; }
-    else                        { const v = val(id);   if (v !== '')        body[k] = v; }
+    else                        { const v = val(id); if (v !== '')        body[k] = v; }
   }
   return body;
 }
@@ -129,160 +121,88 @@ async function send(method, pathTpl, pathFields, bodyFields, wrapId) {
 }
 
 // ════════════════════════════════════════════════════════════════
+// STATUS
+// ════════════════════════════════════════════════════════════════
+function statusHandlers() {
+  document.getElementById('status-send').onclick = async () => {
+    const { status, data, ms } = await apiRequest('GET', '/status');
+    showResponse(document.getElementById('status-res'), status, data, ms);
+  };
+}
+
+// ════════════════════════════════════════════════════════════════
 // PROJECTS
 // ════════════════════════════════════════════════════════════════
-
-function createDeployItem() {
-  const div = document.createElement('div');
-  div.className = 'array-item';
-  div.innerHTML = `
-    <div class="array-item-header">
-      <span class="array-item-title">Deploy</span>
-      <button type="button" class="remove-btn">✕</button>
-    </div>
-    <div class="fields">
-      <div class="field">
-        <label>name</label>
-        <input type="text" placeholder="api" data-field="name" />
-      </div>
-      <div class="field">
-        <label>startPath</label>
-        <input type="text" placeholder="/" data-field="startPath" />
-      </div>
-      <div class="field full">
-        <label>startCommands</label>
-        <input type="text" placeholder="npm run start:prod" data-field="startCommands" />
-      </div>
-      <div class="field full">
-        <label>buildCommands <span class="optional">one per line</span></label>
-        <textarea data-field="buildCommands" placeholder="npm install&#10;npm run build"></textarea>
-      </div>
-    </div>
-  `;
-  div.querySelector('.remove-btn').onclick = () => div.remove();
-  return div;
-}
-
-function createConfigFileItem() {
-  const div = document.createElement('div');
-  div.className = 'array-item';
-  div.innerHTML = `
-    <div class="array-item-header">
-      <span class="array-item-title">Config File</span>
-      <button type="button" class="remove-btn">✕</button>
-    </div>
-    <div class="fields">
-      <div class="field">
-        <label>name</label>
-        <input type="text" placeholder=".env" data-field="name" />
-      </div>
-      <div class="field">
-        <label>relativePath</label>
-        <input type="text" placeholder="." data-field="relativePath" />
-      </div>
-      <div class="field full">
-        <label>content</label>
-        <textarea data-field="content" style="min-height:80px" placeholder="PORT=3000&#10;NODE_ENV=production"></textarea>
-      </div>
-    </div>
-  `;
-  div.querySelector('.remove-btn').onclick = () => div.remove();
-  return div;
-}
-
-function readArrayItems(listId, fieldNames) {
-  const items = [];
-  for (const item of document.getElementById(listId).children) {
-    const obj = {};
-    for (const field of fieldNames) {
-      const el = item.querySelector(`[data-field="${field}"]`);
-      if (!el) continue;
-      const v = el.value.trim();
-      if (field === 'buildCommands') {
-        const lines = v.split('\n').map(l => l.trim()).filter(Boolean);
-        if (lines.length) obj[field] = lines;
-      } else if (v) {
-        obj[field] = v;
-      }
-    }
-    items.push(obj);
-  }
-  return items;
-}
-
 function projectsHandlers() {
 
-  // LIST ALL
   document.getElementById('p-list-send').onclick = async () => {
     const { status, data, ms } = await apiRequest('GET', '/projects');
     showResponse(document.getElementById('p-list-res'), status, data, ms);
   };
 
-  // GET BY ID
   document.getElementById('p-get-send').onclick = () =>
     send('GET', '/projects/:id', [['id','p-get-id']], null, 'p-get-res');
 
-  // ADD DEPLOY / CONFIG FILE
-  document.getElementById('p-c-add-deploy').onclick = () =>
-    document.getElementById('p-c-deploys-list').appendChild(createDeployItem());
+  document.getElementById('p-create-send').onclick = () =>
+    send('POST', '/projects', [], [
+      ['name',      'p-c-name'],
+      ['repository','p-c-repo'],
+      ['cloneLine', 'p-c-clone'],
+    ], 'p-create-res');
 
-  document.getElementById('p-c-add-config').onclick = () =>
-    document.getElementById('p-c-configs-list').appendChild(createConfigFileItem());
-
-  // CREATE
-  document.getElementById('p-create-send').onclick = async () => {
-    const wrap = document.getElementById('p-create-res');
-    const btn  = document.getElementById('p-create-send');
-    btn.disabled = true;
-    btn.textContent = 'Sending…';
-    try {
-      const body = bodyOf([
-        ['name',                'p-c-name'],
-        ['path',                'p-c-path'],
-        ['repository',          'p-c-repo'],
-        ['branch',              'p-c-branch'],
-        ['cloneLine',           'p-c-clone'],
-        ['afterDeployCommands', 'p-c-after'],
-        ['active',              'p-c-active', 'bool'],
-        ['autoUpdate',          'p-c-auto',   'bool'],
-        ['slaveServer',         'p-c-slave',  'json'],
-      ]);
-      body.deploys     = readArrayItems('p-c-deploys-list',  ['name', 'startPath', 'startCommands', 'buildCommands']);
-      body.configFiles = readArrayItems('p-c-configs-list', ['name', 'relativePath', 'content']);
-      const { status, data, ms } = await apiRequest('POST', '/projects', body);
-      showResponse(wrap, status, data, ms);
-    } catch (e) { /* parseJson already alerted */ }
-    finally {
-      btn.disabled = false;
-      btn.textContent = 'Send';
-    }
-  };
-
-  // UPDATE
   document.getElementById('p-update-send').onclick = () =>
     send('PUT', '/projects/:id', [['id','p-u-id']], [
-      ['name',                'p-u-name'],
-      ['path',                'p-u-path'],
-      ['repository',          'p-u-repo'],
-      ['branch',              'p-u-branch'],
-      ['cloneLine',           'p-u-clone'],
-      ['afterDeployCommands', 'p-u-after'],
-      ['active',              'p-u-active',  'bool'],
-      ['autoUpdate',          'p-u-auto',    'bool'],
-      ['slaveServer',         'p-u-slave',   'json'],
+      ['name',      'p-u-name'],
+      ['repository','p-u-repo'],
+      ['cloneLine', 'p-u-clone'],
     ], 'p-update-res');
 
-  // DELETE
   document.getElementById('p-delete-send').onclick = () =>
     send('DELETE', '/projects/:id', [['id','p-d-id']], null, 'p-delete-res');
+}
 
-  // START
-  document.getElementById('p-start-send').onclick = () =>
-    send('POST', '/projects/:id/start', [['id','p-start-id']], null, 'p-start-res');
+// ════════════════════════════════════════════════════════════════
+// PROJECT INSTANCES
+// ════════════════════════════════════════════════════════════════
+function projectInstancesHandlers() {
 
-  // RESTART
-  document.getElementById('p-restart-send').onclick = () =>
-    send('POST', '/projects/:id/restart', [['id','p-restart-id']], null, 'p-restart-res');
+  document.getElementById('pi-list-send').onclick = async () => {
+    const { status, data, ms } = await apiRequest('GET', '/project-instances');
+    showResponse(document.getElementById('pi-list-res'), status, data, ms);
+  };
+
+  document.getElementById('pi-get-send').onclick = () =>
+    send('GET', '/project-instances/:id', [['id','pi-get-id']], null, 'pi-get-res');
+
+  document.getElementById('pi-create-send').onclick = () =>
+    send('POST', '/project-instances', [], [
+      ['name',                'pi-c-name'],
+      ['projectId',           'pi-c-projectId',    'number'],
+      ['branch',              'pi-c-branch'],
+      ['path',                'pi-c-path'],
+      ['slaveServerId',       'pi-c-slaveServerId','number'],
+      ['afterDeployCommands', 'pi-c-after'],
+      ['autoUpdate',          'pi-c-auto',         'bool'],
+    ], 'pi-create-res');
+
+  document.getElementById('pi-update-send').onclick = () =>
+    send('PUT', '/project-instances/:id', [['id','pi-u-id']], [
+      ['name',                'pi-u-name'],
+      ['branch',              'pi-u-branch'],
+      ['path',                'pi-u-path'],
+      ['slaveServerId',       'pi-u-slaveServerId','number'],
+      ['afterDeployCommands', 'pi-u-after'],
+      ['autoUpdate',          'pi-u-auto',         'bool'],
+    ], 'pi-update-res');
+
+  document.getElementById('pi-delete-send').onclick = () =>
+    send('DELETE', '/project-instances/:id', [['id','pi-d-id']], null, 'pi-delete-res');
+
+  document.getElementById('pi-start-send').onclick = () =>
+    send('POST', '/project-instances/:id/start', [['id','pi-start-id']], null, 'pi-start-res');
+
+  document.getElementById('pi-restart-send').onclick = () =>
+    send('POST', '/project-instances/:id/restart', [['id','pi-restart-id']], null, 'pi-restart-res');
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -300,23 +220,29 @@ function deploysHandlers() {
 
   document.getElementById('d-create-send').onclick = () =>
     send('POST', '/deploys', [], [
-      ['name',          'd-c-name'],
-      ['startPath',     'd-c-startPath'],
-      ['buildCommands', 'd-c-build'],
-      ['startCommands', 'd-c-start'],
-      ['projectId',     'd-c-projectId', 'number'],
+      ['name',              'd-c-name'],
+      ['projectInstanceId', 'd-c-instanceId', 'number'],
+      ['startPath',         'd-c-startPath'],
+      ['startCommands',     'd-c-start'],
+      ['buildCommands',     'd-c-build'],
     ], 'd-create-res');
 
   document.getElementById('d-update-send').onclick = () =>
     send('PUT', '/deploys/:id', [['id','d-u-id']], [
       ['name',          'd-u-name'],
       ['startPath',     'd-u-startPath'],
-      ['buildCommands', 'd-u-build'],
       ['startCommands', 'd-u-start'],
+      ['buildCommands', 'd-u-build'],
     ], 'd-update-res');
 
   document.getElementById('d-delete-send').onclick = () =>
     send('DELETE', '/deploys/:id', [['id','d-d-id']], null, 'd-delete-res');
+
+  document.getElementById('d-start-send').onclick = () =>
+    send('POST', '/deploys/:id/start', [['id','d-start-id']], null, 'd-start-res');
+
+  document.getElementById('d-stop-send').onclick = () =>
+    send('POST', '/deploys/:id/stop', [['id','d-stop-id']], null, 'd-stop-res');
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -334,10 +260,10 @@ function configFilesHandlers() {
 
   document.getElementById('cf-create-send').onclick = () =>
     send('POST', '/config-files', [], [
-      ['name',         'cf-c-name'],
-      ['relativePath', 'cf-c-path'],
-      ['content',      'cf-c-content'],
-      ['projectId',    'cf-c-projectId', 'number'],
+      ['name',              'cf-c-name'],
+      ['projectInstanceId', 'cf-c-instanceId', 'number'],
+      ['relativePath',      'cf-c-path'],
+      ['content',           'cf-c-content'],
     ], 'cf-create-res');
 
   document.getElementById('cf-update-send').onclick = () =>
@@ -389,7 +315,9 @@ document.addEventListener('DOMContentLoaded', () => {
   initTopBar();
   initTabs();
   initCards();
+  statusHandlers();
   projectsHandlers();
+  projectInstancesHandlers();
   deploysHandlers();
   configFilesHandlers();
   slaveServersHandlers();

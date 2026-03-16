@@ -30,8 +30,11 @@
 
   <!-- SIDEBAR -->
   <nav class="sidebar">
+    <span class="sidebar-section">General</span>
+    <button class="nav-btn" data-tab="status">🟢 Status</button>
     <span class="sidebar-section">Entities</span>
     <button class="nav-btn active" data-tab="projects">📁 Projects</button>
+    <button class="nav-btn" data-tab="project-instances">📦 Project Instances</button>
     <button class="nav-btn" data-tab="deploys">🚀 Deploys</button>
     <button class="nav-btn" data-tab="config-files">📄 Config Files</button>
     <button class="nav-btn" data-tab="slave-servers">🖥 Slave Servers</button>
@@ -39,6 +42,30 @@
 
   <!-- CONTENT -->
   <main class="content">
+
+    <!-- ════════════════════════════════════════
+         STATUS
+    ════════════════════════════════════════ -->
+    <div id="tab-status" class="tab-content">
+      <div class="tab-title">Status</div>
+
+      <div class="card open">
+        <div class="card-header">
+          <span class="method GET">GET</span>
+          <span class="card-path">/status</span>
+          <span class="card-label">Health check</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <button class="send-btn" id="status-send">Send</button>
+          <div class="response-wrap" id="status-res">
+            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+    </div><!-- /tab-status -->
+
 
     <!-- ════════════════════════════════════════
          PROJECTS
@@ -57,11 +84,7 @@
         <div class="card-body">
           <button class="send-btn" id="p-list-send">Send</button>
           <div class="response-wrap" id="p-list-res">
-            <div class="response-header">
-              <span class="status-badge ok">200</span>
-              <span>Response</span>
-              <span class="response-time"></span>
-            </div>
+            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
             <pre class="response-body"></pre>
           </div>
         </div>
@@ -77,10 +100,7 @@
         </div>
         <div class="card-body">
           <div class="fields single-col">
-            <div class="field">
-              <label>ID</label>
-              <input id="p-get-id" type="number" placeholder="1" />
-            </div>
+            <div class="field"><label>ID</label><input id="p-get-id" type="number" placeholder="1" /></div>
           </div>
           <button class="send-btn" id="p-get-send">Send</button>
           <div class="response-wrap" id="p-get-res">
@@ -105,54 +125,12 @@
               <input id="p-c-name" type="text" placeholder="my-project" />
             </div>
             <div class="field">
-              <label>path</label>
-              <input id="p-c-path" type="text" placeholder="/home/deploy" />
-            </div>
-            <div class="field">
               <label>repository</label>
               <input id="p-c-repo" type="text" placeholder="https://github.com/user/repo" />
             </div>
-            <div class="field">
-              <label>branch</label>
-              <input id="p-c-branch" type="text" placeholder="main" />
-            </div>
             <div class="field full">
               <label>cloneLine</label>
-              <input id="p-c-clone" type="text" placeholder="git clone https://github.com/user/repo" />
-            </div>
-            <div class="field full">
-              <label>afterDeployCommands <span class="optional">optional</span></label>
-              <input id="p-c-after" type="text" placeholder="npm run migrate" />
-            </div>
-            <div class="field">
-              <div class="checkbox-row">
-                <input id="p-c-active" type="checkbox" checked />
-                <label for="p-c-active">active</label>
-              </div>
-            </div>
-            <div class="field">
-              <div class="checkbox-row">
-                <input id="p-c-auto" type="checkbox" />
-                <label for="p-c-auto">autoUpdate</label>
-              </div>
-            </div>
-            <div class="field full">
-              <label>slaveServer <span class="optional">optional — { "id": 1 } or full object</span></label>
-              <textarea id="p-c-slave" placeholder='{"id": 1}'></textarea>
-            </div>
-            <div class="field full">
-              <div class="array-header">
-                <label>configFiles <span class="optional">optional</span></label>
-                <button type="button" class="add-btn" id="p-c-add-config">+ Add Config File</button>
-              </div>
-              <div id="p-c-configs-list" class="array-list"></div>
-            </div>
-            <div class="field full">
-              <div class="array-header">
-                <label>deploys <span class="optional">optional</span></label>
-                <button type="button" class="add-btn" id="p-c-add-deploy">+ Add Deploy</button>
-              </div>
-              <div id="p-c-deploys-list" class="array-list"></div>
+              <input id="p-c-clone" type="text" placeholder="git@github.com:user/repo.git" />
             </div>
           </div>
           <button class="send-btn" id="p-create-send">Send</button>
@@ -182,40 +160,12 @@
               <input id="p-u-name" type="text" />
             </div>
             <div class="field">
-              <label>path <span class="optional">optional</span></label>
-              <input id="p-u-path" type="text" />
-            </div>
-            <div class="field">
               <label>repository <span class="optional">optional</span></label>
               <input id="p-u-repo" type="text" />
             </div>
-            <div class="field">
-              <label>branch <span class="optional">optional</span></label>
-              <input id="p-u-branch" type="text" />
-            </div>
-            <div class="field">
+            <div class="field full">
               <label>cloneLine <span class="optional">optional</span></label>
               <input id="p-u-clone" type="text" />
-            </div>
-            <div class="field">
-              <label>afterDeployCommands <span class="optional">optional</span></label>
-              <input id="p-u-after" type="text" />
-            </div>
-            <div class="field">
-              <div class="checkbox-row">
-                <input id="p-u-active" type="checkbox" checked />
-                <label for="p-u-active">active</label>
-              </div>
-            </div>
-            <div class="field">
-              <div class="checkbox-row">
-                <input id="p-u-auto" type="checkbox" />
-                <label for="p-u-auto">autoUpdate</label>
-              </div>
-            </div>
-            <div class="field full">
-              <label>slaveServer <span class="optional">optional</span></label>
-              <textarea id="p-u-slave" placeholder='{"id": 1}'></textarea>
             </div>
           </div>
           <button class="send-btn" id="p-update-send">Send</button>
@@ -236,10 +186,7 @@
         </div>
         <div class="card-body">
           <div class="fields single-col">
-            <div class="field">
-              <label>ID</label>
-              <input id="p-d-id" type="number" placeholder="1" />
-            </div>
+            <div class="field"><label>ID</label><input id="p-d-id" type="number" placeholder="1" /></div>
           </div>
           <button class="send-btn" id="p-delete-send">Send</button>
           <div class="response-wrap" id="p-delete-res">
@@ -249,53 +196,211 @@
         </div>
       </div>
 
-      <!-- START -->
-      <div class="card">
-        <div class="card-header">
-          <span class="method POST">POST</span>
-          <span class="card-path">/projects/:id/start</span>
-          <span class="card-label">Start deploys</span>
-          <span class="card-chevron">▶</span>
-        </div>
-        <div class="card-body">
-          <div class="fields single-col">
-            <div class="field">
-              <label>Project ID</label>
-              <input id="p-start-id" type="number" placeholder="1" />
-            </div>
-          </div>
-          <button class="send-btn" id="p-start-send">Send</button>
-          <div class="response-wrap" id="p-start-res">
-            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
-            <pre class="response-body"></pre>
-          </div>
-        </div>
-      </div>
-
-      <!-- RESTART -->
-      <div class="card">
-        <div class="card-header">
-          <span class="method POST">POST</span>
-          <span class="card-path">/projects/:id/restart</span>
-          <span class="card-label">Restart deploys</span>
-          <span class="card-chevron">▶</span>
-        </div>
-        <div class="card-body">
-          <div class="fields single-col">
-            <div class="field">
-              <label>Project ID</label>
-              <input id="p-restart-id" type="number" placeholder="1" />
-            </div>
-          </div>
-          <button class="send-btn" id="p-restart-send">Send</button>
-          <div class="response-wrap" id="p-restart-res">
-            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
-            <pre class="response-body"></pre>
-          </div>
-        </div>
-      </div>
-
     </div><!-- /tab-projects -->
+
+
+    <!-- ════════════════════════════════════════
+         PROJECT INSTANCES
+    ════════════════════════════════════════ -->
+    <div id="tab-project-instances" class="tab-content">
+      <div class="tab-title">Project Instances</div>
+
+      <!-- LIST ALL -->
+      <div class="card open">
+        <div class="card-header">
+          <span class="method GET">GET</span>
+          <span class="card-path">/project-instances</span>
+          <span class="card-label">List all</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <button class="send-btn" id="pi-list-send">Send</button>
+          <div class="response-wrap" id="pi-list-res">
+            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- GET BY ID -->
+      <div class="card">
+        <div class="card-header">
+          <span class="method GET">GET</span>
+          <span class="card-path">/project-instances/:id</span>
+          <span class="card-label">Get by ID</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <div class="fields single-col">
+            <div class="field"><label>ID</label><input id="pi-get-id" type="number" placeholder="1" /></div>
+          </div>
+          <button class="send-btn" id="pi-get-send">Send</button>
+          <div class="response-wrap" id="pi-get-res">
+            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- CREATE -->
+      <div class="card">
+        <div class="card-header">
+          <span class="method POST">POST</span>
+          <span class="card-path">/project-instances</span>
+          <span class="card-label">Create</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <div class="fields">
+            <div class="field">
+              <label>name</label>
+              <input id="pi-c-name" type="text" placeholder="my-instance" />
+            </div>
+            <div class="field">
+              <label>projectId</label>
+              <input id="pi-c-projectId" type="number" placeholder="1" />
+            </div>
+            <div class="field">
+              <label>branch</label>
+              <input id="pi-c-branch" type="text" placeholder="main" />
+            </div>
+            <div class="field">
+              <label>path</label>
+              <input id="pi-c-path" type="text" placeholder="/home/deploy" />
+            </div>
+            <div class="field">
+              <label>slaveServerId <span class="optional">optional</span></label>
+              <input id="pi-c-slaveServerId" type="number" placeholder="1" />
+            </div>
+            <div class="field">
+              <label>afterDeployCommands <span class="optional">optional</span></label>
+              <input id="pi-c-after" type="text" placeholder="npm run migrate" />
+            </div>
+            <div class="field">
+              <div class="checkbox-row">
+                <input id="pi-c-auto" type="checkbox" />
+                <label for="pi-c-auto">autoUpdate</label>
+              </div>
+            </div>
+          </div>
+          <button class="send-btn" id="pi-create-send">Send</button>
+          <div class="response-wrap" id="pi-create-res">
+            <div class="response-header"><span class="status-badge ok">201</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- UPDATE -->
+      <div class="card">
+        <div class="card-header">
+          <span class="method PUT">PUT</span>
+          <span class="card-path">/project-instances/:id</span>
+          <span class="card-label">Update</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <div class="fields">
+            <div class="field">
+              <label>ID</label>
+              <input id="pi-u-id" type="number" placeholder="1" />
+            </div>
+            <div class="field">
+              <label>name <span class="optional">optional</span></label>
+              <input id="pi-u-name" type="text" />
+            </div>
+            <div class="field">
+              <label>branch <span class="optional">optional</span></label>
+              <input id="pi-u-branch" type="text" />
+            </div>
+            <div class="field">
+              <label>path <span class="optional">optional</span></label>
+              <input id="pi-u-path" type="text" />
+            </div>
+            <div class="field">
+              <label>slaveServerId <span class="optional">optional — set 0 to remove</span></label>
+              <input id="pi-u-slaveServerId" type="number" />
+            </div>
+            <div class="field">
+              <label>afterDeployCommands <span class="optional">optional</span></label>
+              <input id="pi-u-after" type="text" />
+            </div>
+            <div class="field">
+              <div class="checkbox-row">
+                <input id="pi-u-auto" type="checkbox" />
+                <label for="pi-u-auto">autoUpdate</label>
+              </div>
+            </div>
+          </div>
+          <button class="send-btn" id="pi-update-send">Send</button>
+          <div class="response-wrap" id="pi-update-res">
+            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- DELETE -->
+      <div class="card">
+        <div class="card-header">
+          <span class="method DELETE">DELETE</span>
+          <span class="card-path">/project-instances/:id</span>
+          <span class="card-label">Delete</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <div class="fields single-col">
+            <div class="field"><label>ID</label><input id="pi-d-id" type="number" placeholder="1" /></div>
+          </div>
+          <button class="send-btn" id="pi-delete-send">Send</button>
+          <div class="response-wrap" id="pi-delete-res">
+            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- START DEPLOYS -->
+      <div class="card">
+        <div class="card-header">
+          <span class="method POST">POST</span>
+          <span class="card-path">/project-instances/:id/start</span>
+          <span class="card-label">Start all deploys</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <div class="fields single-col">
+            <div class="field"><label>Instance ID</label><input id="pi-start-id" type="number" placeholder="1" /></div>
+          </div>
+          <button class="send-btn" id="pi-start-send">Send</button>
+          <div class="response-wrap" id="pi-start-res">
+            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- RESTART DEPLOYS -->
+      <div class="card">
+        <div class="card-header">
+          <span class="method POST">POST</span>
+          <span class="card-path">/project-instances/:id/restart</span>
+          <span class="card-label">Restart all deploys</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <div class="fields single-col">
+            <div class="field"><label>Instance ID</label><input id="pi-restart-id" type="number" placeholder="1" /></div>
+          </div>
+          <button class="send-btn" id="pi-restart-send">Send</button>
+          <div class="response-wrap" id="pi-restart-res">
+            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /tab-project-instances -->
 
 
     <!-- ════════════════════════════════════════
@@ -356,8 +461,8 @@
               <input id="d-c-name" type="text" placeholder="api" />
             </div>
             <div class="field">
-              <label>projectId</label>
-              <input id="d-c-projectId" type="number" placeholder="1" />
+              <label>projectInstanceId</label>
+              <input id="d-c-instanceId" type="number" placeholder="1" />
             </div>
             <div class="field">
               <label>startPath</label>
@@ -439,6 +544,46 @@
         </div>
       </div>
 
+      <!-- START -->
+      <div class="card">
+        <div class="card-header">
+          <span class="method POST">POST</span>
+          <span class="card-path">/deploys/:id/start</span>
+          <span class="card-label">Start / Restart</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <div class="fields single-col">
+            <div class="field"><label>Deploy ID</label><input id="d-start-id" type="number" placeholder="1" /></div>
+          </div>
+          <button class="send-btn" id="d-start-send">Send</button>
+          <div class="response-wrap" id="d-start-res">
+            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- STOP -->
+      <div class="card">
+        <div class="card-header">
+          <span class="method POST">POST</span>
+          <span class="card-path">/deploys/:id/stop</span>
+          <span class="card-label">Stop</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <div class="fields single-col">
+            <div class="field"><label>Deploy ID</label><input id="d-stop-id" type="number" placeholder="1" /></div>
+          </div>
+          <button class="send-btn" id="d-stop-send">Send</button>
+          <div class="response-wrap" id="d-stop-res">
+            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
     </div><!-- /tab-deploys -->
 
 
@@ -500,11 +645,11 @@
               <input id="cf-c-name" type="text" placeholder=".env" />
             </div>
             <div class="field">
-              <label>projectId</label>
-              <input id="cf-c-projectId" type="number" placeholder="1" />
+              <label>projectInstanceId</label>
+              <input id="cf-c-instanceId" type="number" placeholder="1" />
             </div>
             <div class="field full">
-              <label>relativePath <span class="optional">directory inside project</span></label>
+              <label>relativePath <span class="optional">directory inside repo</span></label>
               <input id="cf-c-path" type="text" placeholder="." />
             </div>
             <div class="field full">
