@@ -21,7 +21,7 @@ export class DeployService {
   async findById(id: number): Promise<Deploy | null> {
     return this.deployRepository.findOne({
       where: { id },
-      relations: { project: true },
+      relations: { projectInstance: { project: true } },
     });
   }
 
@@ -69,7 +69,7 @@ export class DeployService {
     }
 
     const { stdout, stderr } = await execAsync(cmds.join(" && "), {
-      cwd: path.join(projectPath),
+      cwd: path.join(projectPath, deploy.startPath),
     });
 
     logger.info(`[DeployService] Build ${deploy.name}:`, stdout);
