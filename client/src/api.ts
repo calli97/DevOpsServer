@@ -34,15 +34,17 @@ export const api = {
   },
 
   deploys: {
-    create:   (data: unknown)         => request('POST',   '/deploys', data),
-    delete:   (id: number)            => request('DELETE', `/deploys/${id}`),
-    start:    (id: number)            => request('POST',   `/deploys/${id}/start`),
-    stop:     (id: number)            => request('POST',   `/deploys/${id}/stop`),
+    create:   (data: unknown)             => request('POST',   '/deploys', data),
+    update:   (id: number, data: unknown) => request('PUT',    `/deploys/${id}`, data),
+    delete:   (id: number)                => request('DELETE', `/deploys/${id}`),
+    start:    (id: number)                => request('POST',   `/deploys/${id}/start`),
+    stop:     (id: number)                => request('POST',   `/deploys/${id}/stop`),
   },
 
   configFiles: {
-    create:   (data: unknown)         => request('POST',   '/config-files', data),
-    delete:   (id: number)            => request('DELETE', `/config-files/${id}`),
+    create:   (data: unknown)             => request('POST',   '/config-files', data),
+    update:   (id: number, data: unknown) => request('PUT',    `/config-files/${id}`, data),
+    delete:   (id: number)                => request('DELETE', `/config-files/${id}`),
   },
 
   slaveServers: {

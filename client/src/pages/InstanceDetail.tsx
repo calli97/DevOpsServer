@@ -34,6 +34,7 @@ interface Instance {
 
 const emptyDeployForm = { name: '', startPath: '/', startCommands: '', buildCommands: '' }
 const emptyConfigForm = { name: '', relativePath: '.', content: '' }
+const emptyEditForm   = { branch: '', path: '', afterDeployCommands: '', autoUpdate: false }
 
 export default function InstanceDetail() {
   const { id } = useParams<{ id: string }>()
@@ -41,6 +42,11 @@ export default function InstanceDetail() {
   const [instance, setInstance] = useState<Instance | null>(null)
   const [loading, setLoading]   = useState(true)
   const [error, setError]       = useState('')
+
+  const [showEditInstance, setShowEditInstance] = useState(false)
+  const [editForm, setEditForm]                 = useState(emptyEditForm)
+  const [editError, setEditError]               = useState('')
+  const [editSaving, setEditSaving]             = useState(false)
 
   const [showDeployForm, setShowDeployForm]   = useState(false)
   const [deployForm, setDeployForm]           = useState(emptyDeployForm)
@@ -52,10 +58,120 @@ export default function InstanceDetail() {
   const [configError, setConfigError]         = useState('')
   const [configSaving, setConfigSaving]       = useState(false)
 
+  const [viewingConfigFile, setViewingConfigFile] = useState<ConfigFile | null>(null)
+  const [editingConfigFile, setEditingConfigFile] = useState<ConfigFile | null>(null)
+  const [editConfigForm, setEditConfigForm]       = useState({ name: '', relativePath: '', content: '' })
+  const [editConfigError, setEditConfigError]     = useState('')
+  const [editConfigSaving, setEditConfigSaving]   = useState(false)
+
+  const [editingDeploy, setEditingDeploy]   = useState<Deploy | null>(null)
+  const [editDeployForm, setEditDeployForm] = useState({ name: '', startPath: '', startCommands: '', buildCommands: '' })
+  const [editDeployError, setEditDeployError] = useState('')
+  const [editDeploySaving, setEditDeploySaving] = useState(false)
+
   const [actionLoading, setActionLoading]     = useState<Record<string, boolean>>({})
   const [actionMsg, setActionMsg]             = useState('')
 
   useEffect(() => { loadInstance() }, [id])
+
+  function openEditInstance(inst: Instance) {
+    setEditForm({
+      branch: inst.branch,
+      path: inst.path,
+      afterDeployCommands: inst.afterDeployCommands ?? '',
+      autoUpdate: inst.autoUpdate,
+    })
+    setEditError('')
+    setShowEditInstance(true)
+  }
+
+  async function updateInstance(e: React.FormEvent) {
+    e.preventDefault()
+    setEditError('')
+    setEditSaving(true)
+    try {
+      const res = await api.instances.update(Number(id), {
+        branch: editForm.branch,
+        path: editForm.path,
+        afterDeployCommands: editForm.afterDeployCommands || null,
+        autoUpdate: editForm.autoUpdate,
+      }) as { ok: boolean; error?: string }
+      if (res.ok) {
+        setShowEditInstance(false)
+        loadInstance()
+      } else {
+        setEditError(res.error ?? 'Failed to update instance')
+      }
+    } catch {
+      setEditError('Request failed')
+    } finally {
+      setEditSaving(false)
+    }
+  }
+
+  function openEditDeploy(d: Deploy) {
+    setEditingDeploy(d)
+    setEditDeployForm({
+      name: d.name,
+      startPath: d.startPath,
+      startCommands: d.startCommands,
+      buildCommands: d.buildCommands ?? '',
+    })
+    setEditDeployError('')
+  }
+
+  async function saveDeploy(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editingDeploy) return
+    setEditDeployError('')
+    setEditDeploySaving(true)
+    try {
+      const body: Record<string, unknown> = {
+        name: editDeployForm.name,
+        startPath: editDeployForm.startPath,
+        startCommands: editDeployForm.startCommands,
+      }
+      if (editDeployForm.buildCommands) body.buildCommands = editDeployForm.buildCommands
+      const res = await api.deploys.update(editingDeploy.id, body) as { ok: boolean; error?: string }
+      if (res.ok) {
+        setEditingDeploy(null)
+        loadInstance()
+      } else {
+        setEditDeployError(res.error ?? 'Failed to update deploy')
+      }
+    } catch {
+      setEditDeployError('Request failed')
+    } finally {
+      setEditDeploySaving(false)
+    }
+  }
+
+  function openEditConfigFile(cf: ConfigFile) {
+    setEditingConfigFile(cf)
+    setEditConfigForm({ name: cf.name, relativePath: cf.relativePath, content: cf.content })
+    setEditConfigError('')
+    setViewingConfigFile(null)
+  }
+
+  async function saveConfigFile(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editingConfigFile) return
+    setEditConfigError('')
+    setEditConfigSaving(true)
+    try {
+      const res = await api.configFiles.update(editingConfigFile.id, editConfigForm) as { ok: boolean; error?: string }
+      if (res.ok) {
+        setEditingConfigFile(null)
+        loadInstance()
+      } else {
+        setEditConfigError(res.error ?? 'Failed to update config file')
+      }
+    } catch {
+      setEditConfigError('Request failed')
+    } finally {
+      setEditConfigSaving(false)
+    }
+  }
 
   async function loadInstance() {
     setLoading(true)
@@ -223,19 +339,22 @@ export default function InstanceDetail() {
 
         <div className="card" style={{ marginBottom: 32 }}>
           <div className="card-body">
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-              {[
-                ['Branch', instance.branch],
-                ['Path',   instance.path],
-                ['Slave',  instance.slaveServer?.nombre ?? 'None (local)'],
-              ].map(([label, value]) => (
-                <div key={label}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 2 }}>{label}</div>
-                  <div style={{ fontSize: 13 }}>{value}</div>
-                </div>
-              ))}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, flex: 1 }}>
+                {[
+                  ['Branch', instance.branch],
+                  ['Path',   instance.path],
+                  ['Slave',  instance.slaveServer?.nombre ?? 'None (local)'],
+                ].map(([label, value]) => (
+                  <div key={label}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 2 }}>{label}</div>
+                    <div style={{ fontSize: 13 }}>{value}</div>
+                  </div>
+                ))}
+              </div>
+              <button className="btn btn-ghost btn-sm" onClick={() => openEditInstance(instance)}>✏ Edit</button>
             </div>
-            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <span className={`badge ${instance.cloned ? 'badge-green' : 'badge-red'}`}>
                 {instance.cloned ? '✓ Cloned' : '✗ Not cloned'}
               </span>
@@ -244,6 +363,44 @@ export default function InstanceDetail() {
                 <span className="badge badge-gray">After-deploy: {instance.afterDeployCommands}</span>
               )}
             </div>
+
+            {showEditInstance && (
+              <div style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+                {editError && <div className="banner banner-error" style={{ marginBottom: 12 }}>{editError}</div>}
+                <form className="form" onSubmit={updateInstance}>
+                  <div className="form-grid">
+                    <div className="field">
+                      <label>Branch</label>
+                      <input className="input" value={editForm.branch}
+                        onChange={e => setEditForm(f => ({ ...f, branch: e.target.value }))} required />
+                    </div>
+                    <div className="field">
+                      <label>Path</label>
+                      <input className="input" value={editForm.path}
+                        onChange={e => setEditForm(f => ({ ...f, path: e.target.value }))} required />
+                    </div>
+                    <div className="field full">
+                      <label>After Deploy Commands <span style={{ fontWeight: 400, textTransform: 'none' }}>(optional)</span></label>
+                      <input className="input" placeholder="npm run migrate" value={editForm.afterDeployCommands}
+                        onChange={e => setEditForm(f => ({ ...f, afterDeployCommands: e.target.value }))} />
+                    </div>
+                    <div className="field full">
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <input type="checkbox" checked={editForm.autoUpdate}
+                          onChange={e => setEditForm(f => ({ ...f, autoUpdate: e.target.checked }))} />
+                        Auto-update on push
+                      </label>
+                    </div>
+                  </div>
+                  <div className="form-actions">
+                    <button type="button" className="btn btn-ghost" onClick={() => setShowEditInstance(false)}>Cancel</button>
+                    <button type="submit" className="btn btn-primary" disabled={editSaving}>
+                      {editSaving ? 'Saving…' : 'Save Changes'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
           </div>
         </div>
 
@@ -297,29 +454,70 @@ export default function InstanceDetail() {
               <div className="empty">No deploys configured yet.</div>
             ) : (
               instance.deploys.map(d => (
-                <div className="list-item" key={d.id}>
-                  <div className="item-info">
-                    <div className="item-name">{d.name}</div>
-                    <div className="item-meta">
-                      path: {d.startPath} · <code style={{ fontSize: 11 }}>{d.startCommands}</code>
+                <div key={d.id}>
+                  <div className="list-item">
+                    <div className="item-info">
+                      <div className="item-name">{d.name}</div>
+                      <div className="item-meta">
+                        path: {d.startPath} · <code style={{ fontSize: 11 }}>{d.startCommands}</code>
+                      </div>
+                    </div>
+                    <div className="item-actions">
+                      <span className={`badge ${d.started ? 'badge-green' : 'badge-gray'}`}>
+                        {d.started ? 'running' : 'stopped'}
+                      </span>
+                      <button className="btn btn-success btn-sm"
+                        onClick={() => startDeploy(d.id)}
+                        disabled={actionLoading[`start-${d.id}`]}>
+                        {actionLoading[`start-${d.id}`] ? '…' : d.started ? '↺ Restart' : '▶ Start'}
+                      </button>
+                      <button className="btn btn-warning btn-sm"
+                        onClick={() => stopDeploy(d.id)}
+                        disabled={actionLoading[`stop-${d.id}`]}>
+                        {actionLoading[`stop-${d.id}`] ? '…' : '■ Stop'}
+                      </button>
+                      <button className="btn btn-ghost btn-sm"
+                        onClick={() => editingDeploy?.id === d.id ? setEditingDeploy(null) : openEditDeploy(d)}>
+                        {editingDeploy?.id === d.id ? 'Cancel' : '✏ Edit'}
+                      </button>
+                      <button className="btn btn-danger btn-sm" onClick={() => deleteDeploy(d.id)}>Delete</button>
                     </div>
                   </div>
-                  <div className="item-actions">
-                    <span className={`badge ${d.started ? 'badge-green' : 'badge-gray'}`}>
-                      {d.started ? 'running' : 'stopped'}
-                    </span>
-                    <button className="btn btn-success btn-sm"
-                      onClick={() => startDeploy(d.id)}
-                      disabled={actionLoading[`start-${d.id}`]}>
-                      {actionLoading[`start-${d.id}`] ? '…' : d.started ? '↺ Restart' : '▶ Start'}
-                    </button>
-                    <button className="btn btn-warning btn-sm"
-                      onClick={() => stopDeploy(d.id)}
-                      disabled={actionLoading[`stop-${d.id}`]}>
-                      {actionLoading[`stop-${d.id}`] ? '…' : '■ Stop'}
-                    </button>
-                    <button className="btn btn-danger btn-sm" onClick={() => deleteDeploy(d.id)}>Delete</button>
-                  </div>
+                  {editingDeploy?.id === d.id && (
+                    <div style={{ padding: '0 16px 16px', borderTop: '1px solid var(--border)' }}>
+                      {editDeployError && <div className="banner banner-error" style={{ margin: '12px 0 8px' }}>{editDeployError}</div>}
+                      <form className="form" style={{ marginTop: 12 }} onSubmit={saveDeploy}>
+                        <div className="form-grid">
+                          <div className="field">
+                            <label>Name</label>
+                            <input className="input" value={editDeployForm.name}
+                              onChange={e => setEditDeployForm(f => ({ ...f, name: e.target.value }))} required />
+                          </div>
+                          <div className="field">
+                            <label>Start Path</label>
+                            <input className="input" value={editDeployForm.startPath}
+                              onChange={e => setEditDeployForm(f => ({ ...f, startPath: e.target.value }))} required />
+                          </div>
+                          <div className="field full">
+                            <label>Start Commands</label>
+                            <input className="input" value={editDeployForm.startCommands}
+                              onChange={e => setEditDeployForm(f => ({ ...f, startCommands: e.target.value }))} required />
+                          </div>
+                          <div className="field full">
+                            <label>Build Commands <span style={{ fontWeight: 400, textTransform: 'none' }}>(optional — JSON array)</span></label>
+                            <input className="input" placeholder='["npm install","npm run build"]' value={editDeployForm.buildCommands}
+                              onChange={e => setEditDeployForm(f => ({ ...f, buildCommands: e.target.value }))} />
+                          </div>
+                        </div>
+                        <div className="form-actions">
+                          <button type="button" className="btn btn-ghost" onClick={() => setEditingDeploy(null)}>Cancel</button>
+                          <button type="submit" className="btn btn-primary" disabled={editDeploySaving}>
+                            {editDeploySaving ? 'Saving…' : 'Save Changes'}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
                 </div>
               ))
             )}
@@ -372,14 +570,74 @@ export default function InstanceDetail() {
               <div className="empty">No config files yet.</div>
             ) : (
               instance.configFiles.map(cf => (
-                <div className="list-item" key={cf.id}>
-                  <div className="item-info">
-                    <div className="item-name">{cf.name}</div>
-                    <div className="item-meta">in: {cf.relativePath}</div>
+                <div key={cf.id}>
+                  <div className="list-item">
+                    <div className="item-info">
+                      <div className="item-name">{cf.name}</div>
+                      <div className="item-meta">in: {cf.relativePath}</div>
+                    </div>
+                    <div className="item-actions">
+                      <button className="btn btn-ghost btn-sm"
+                        onClick={() => {
+                          if (editingConfigFile?.id === cf.id) return
+                          setViewingConfigFile(viewingConfigFile?.id === cf.id ? null : cf)
+                        }}>
+                        {viewingConfigFile?.id === cf.id ? 'Hide' : '👁 View'}
+                      </button>
+                      <button className="btn btn-ghost btn-sm"
+                        onClick={() => editingConfigFile?.id === cf.id ? setEditingConfigFile(null) : openEditConfigFile(cf)}>
+                        {editingConfigFile?.id === cf.id ? 'Cancel' : '✏ Edit'}
+                      </button>
+                      <button className="btn btn-danger btn-sm" onClick={() => deleteConfigFile(cf.id)}>Delete</button>
+                    </div>
                   </div>
-                  <div className="item-actions">
-                    <button className="btn btn-danger btn-sm" onClick={() => deleteConfigFile(cf.id)}>Delete</button>
-                  </div>
+                  {viewingConfigFile?.id === cf.id && editingConfigFile?.id !== cf.id && (
+                    <div style={{ padding: '0 16px 16px' }}>
+                      <pre style={{
+                        margin: 0,
+                        padding: 12,
+                        background: 'var(--bg)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 6,
+                        fontSize: 12,
+                        lineHeight: 1.6,
+                        overflowX: 'auto',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-all',
+                        color: 'var(--text)',
+                      }}>{cf.content}</pre>
+                    </div>
+                  )}
+                  {editingConfigFile?.id === cf.id && (
+                    <div style={{ padding: '0 16px 16px', borderTop: '1px solid var(--border)' }}>
+                      {editConfigError && <div className="banner banner-error" style={{ margin: '12px 0 8px' }}>{editConfigError}</div>}
+                      <form className="form" style={{ marginTop: 12 }} onSubmit={saveConfigFile}>
+                        <div className="form-grid">
+                          <div className="field">
+                            <label>File Name</label>
+                            <input className="input" value={editConfigForm.name}
+                              onChange={e => setEditConfigForm(f => ({ ...f, name: e.target.value }))} required />
+                          </div>
+                          <div className="field">
+                            <label>Relative Path</label>
+                            <input className="input" value={editConfigForm.relativePath}
+                              onChange={e => setEditConfigForm(f => ({ ...f, relativePath: e.target.value }))} required />
+                          </div>
+                          <div className="field full">
+                            <label>Content</label>
+                            <textarea className="textarea" value={editConfigForm.content}
+                              onChange={e => setEditConfigForm(f => ({ ...f, content: e.target.value }))} required />
+                          </div>
+                        </div>
+                        <div className="form-actions">
+                          <button type="button" className="btn btn-ghost" onClick={() => setEditingConfigFile(null)}>Cancel</button>
+                          <button type="submit" className="btn btn-primary" disabled={editConfigSaving}>
+                            {editConfigSaving ? 'Saving…' : 'Save Changes'}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
                 </div>
               ))
             )}

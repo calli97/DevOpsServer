@@ -71,11 +71,16 @@ export class ProjectInstanceService {
     });
 
     try {
-      await execAsync(`git clone ${full.project.cloneLine}`, { cwd: full.path });
+      await execAsync(`git clone ${full.project.cloneLine}`, {
+        cwd: full.path,
+      });
       full.cloned = true;
       return repository.save(full);
     } catch (error) {
-      logger.warning(`[ProjectInstanceService] Failed to clone repo for instance ${full.id}:`, error);
+      logger.warning(
+        `[ProjectInstanceService] Failed to clone repo for instance ${full.id}:`,
+        error,
+      );
       return full;
     }
   }

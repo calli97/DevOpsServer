@@ -88,6 +88,9 @@ export class DeployService {
     if (buildResponse.stderr && buildResponse.stderr != "") {
       return buildResponse;
     }
+    logger.success(
+      `[DeployService] Build completed for deploy ${deploy.name} [ID: ${deploy.id}]`,
+    );
     return await this.pm2Service.start(
       deploy.name,
       deploy.startCommands,
