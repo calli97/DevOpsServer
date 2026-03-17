@@ -5,14 +5,14 @@ import { NotFoundError } from "../errors/AppError";
 export class SlaveServerService {
   async findAll(): Promise<SlaveServer[]> {
     const repository = await getRepository(SlaveServer);
-    return repository.find({ relations: { projects: true } });
+    return repository.find({ relations: { instances: true } });
   }
 
   async findById(id: number): Promise<SlaveServer> {
     const repository = await getRepository(SlaveServer);
     const slaveServer = await repository.findOne({
       where: { id },
-      relations: { projects: true },
+      relations: { instances: true },
     });
 
     if (!slaveServer) {
@@ -28,7 +28,10 @@ export class SlaveServerService {
     return repository.save(slaveServer);
   }
 
-  async updateById(id: number, data: Partial<SlaveServer>): Promise<SlaveServer> {
+  async updateById(
+    id: number,
+    data: Partial<SlaveServer>,
+  ): Promise<SlaveServer> {
     const repository = await getRepository(SlaveServer);
     const slaveServer = await repository.findOne({ where: { id } });
 
