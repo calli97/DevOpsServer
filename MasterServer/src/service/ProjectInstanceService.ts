@@ -119,10 +119,10 @@ export class ProjectInstanceService {
     return (result.affected ?? 0) > 0;
   }
 
-  async startDeploys(
+  async startOrRestartDeploys(
     instance: ProjectInstance,
   ): Promise<{ deploy: Deploy; error: Error }[]> {
-    const started: Deploy[] = [];
+    const succeeded: Deploy[] = [];
     const errors: { deploy: Deploy; error: Error }[] = [];
 
     if (instance.slaveServer) {
@@ -142,11 +142,13 @@ export class ProjectInstanceService {
 
     for (const deploy of instance.deploys) {
       try {
-        const result = await this.deployService.start(instanceDir, deploy);
+        const result = deploy.started
+          ? await this.deployService.restart(instanceDir, deploy)
+          : await this.deployService.start(instanceDir, deploy);
         if (result.stderr) {
           errors.push({ deploy, error: new Error(result.stderr) });
         } else {
-          started.push(deploy);
+          succeeded.push(deploy);
         }
       } catch (error) {
         errors.push({ deploy, error: error as Error });
@@ -154,52 +156,7 @@ export class ProjectInstanceService {
     }
 
     if (errors.length > 0) {
-      for (const deploy of started) {
-        try {
-          await this.deployService.stop(instanceDir, deploy);
-        } catch {}
-      }
-    }
-
-    return errors;
-  }
-
-  async restartDeploys(
-    instance: ProjectInstance,
-  ): Promise<{ deploy: Deploy; error: Error }[]> {
-    const restarted: Deploy[] = [];
-    const errors: { deploy: Deploy; error: Error }[] = [];
-
-    if (instance.slaveServer) {
-      // Send information to slave server
-      return [];
-    }
-
-    const instanceDir = path.join(
-      instance.path,
-      this.githubService.getProjectDirectoryName(instance.project.cloneLine),
-    );
-
-    await execAsync(`git pull origin ${instance.branch}`, { cwd: instanceDir });
-    await execAsync(`git switch ${instance.branch}`, { cwd: instanceDir });
-
-    await this.configFileService.writeFilesForInstance(instance, instanceDir);
-
-    for (const deploy of instance.deploys) {
-      try {
-        const result = await this.deployService.restart(instanceDir, deploy);
-        if (result.stderr) {
-          errors.push({ deploy, error: new Error(result.stderr) });
-        } else {
-          restarted.push(deploy);
-        }
-      } catch (error) {
-        errors.push({ deploy, error: error as Error });
-      }
-    }
-
-    if (errors.length > 0) {
-      for (const deploy of restarted) {
+      for (const deploy of succeeded) {
         try {
           await this.deployService.stop(instanceDir, deploy);
         } catch {}

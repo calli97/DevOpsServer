@@ -100,7 +100,7 @@ export class ProjectInstanceController {
     try {
       const { id } = req.params;
       const instance = await this.projectInstanceService.findById(Number(id));
-      const errors = await this.projectInstanceService.startDeploys(instance);
+      const errors = await this.projectInstanceService.startOrRestartDeploys(instance);
 
       if (errors.length > 0) {
         return res.status(500).json({
@@ -119,33 +119,6 @@ export class ProjectInstanceController {
         return res.status(404).json({ ok: false, error: error.message });
       }
       logger.error("[ProjectInstanceController] Error starting deploys:", error);
-      return res.status(500).json({ ok: false, error: error.message });
-    }
-  };
-
-  restartDeploys = async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      const instance = await this.projectInstanceService.findById(Number(id));
-      const errors = await this.projectInstanceService.restartDeploys(instance);
-
-      if (errors.length > 0) {
-        return res.status(500).json({
-          ok: false,
-          error: "Some deploys failed to restart",
-          failures: errors.map(({ deploy, error }) => ({
-            deploy: deploy.name,
-            error: error.message,
-          })),
-        });
-      }
-
-      return res.status(200).json({ ok: true, message: "All deploys restarted" });
-    } catch (error) {
-      if (error.statusCode === 404) {
-        return res.status(404).json({ ok: false, error: error.message });
-      }
-      logger.error("[ProjectInstanceController] Error restarting deploys:", error);
       return res.status(500).json({ ok: false, error: error.message });
     }
   };

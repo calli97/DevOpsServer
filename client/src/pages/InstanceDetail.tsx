@@ -202,18 +202,6 @@ export default function InstanceDetail() {
     }
   }
 
-  async function restartAll() {
-    setAction('restartAll', true)
-    setActionMsg('')
-    try {
-      const res = await api.instances.restart(Number(id)) as { ok: boolean; error?: string }
-      setActionMsg(res.ok ? 'All deploys restarted successfully.' : (res.error ?? 'Some deploys failed.'))
-      loadInstance()
-    } finally {
-      setAction('restartAll', false)
-    }
-  }
-
   async function startDeploy(deployId: number) {
     setAction(`start-${deployId}`, true)
     try {
@@ -328,9 +316,6 @@ export default function InstanceDetail() {
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn btn-success" onClick={startAll} disabled={actionLoading['startAll']}>
               {actionLoading['startAll'] ? 'Starting…' : '▶ Start All'}
-            </button>
-            <button className="btn btn-warning" onClick={restartAll} disabled={actionLoading['restartAll']}>
-              {actionLoading['restartAll'] ? 'Restarting…' : '↺ Restart All'}
             </button>
           </div>
         </div>
@@ -469,7 +454,7 @@ export default function InstanceDetail() {
                       <button className="btn btn-success btn-sm"
                         onClick={() => startDeploy(d.id)}
                         disabled={actionLoading[`start-${d.id}`]}>
-                        {actionLoading[`start-${d.id}`] ? '…' : d.started ? '↺ Restart' : '▶ Start'}
+                        {actionLoading[`start-${d.id}`] ? '…' : '▶ Start'}
                       </button>
                       <button className="btn btn-warning btn-sm"
                         onClick={() => stopDeploy(d.id)}

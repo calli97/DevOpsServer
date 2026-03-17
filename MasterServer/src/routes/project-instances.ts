@@ -37,6 +37,5 @@ router.post("/", validate(createProjectInstanceSchema), async (req, res) => (awa
 router.put("/:id", validate(idParamSchema, "params"), validate(updateProjectInstanceSchema), async (req, res) => (await getController()).update(req, res));
 router.delete("/:id", validate(idParamSchema, "params"), async (req, res) => (await getController()).delete(req, res));
 router.post("/:id/start", validate(idParamSchema, "params"), async (req, res) => (await getController()).startDeploys(req, res));
-router.post("/:id/restart", validate(idParamSchema, "params"), async (req, res) => (await getController()).restartDeploys(req, res));
 
 export default router;

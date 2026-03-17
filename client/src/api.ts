@@ -30,7 +30,6 @@ export const api = {
     update:   (id: number, data: unknown) => request('PUT', `/project-instances/${id}`, data),
     delete:   (id: number)            => request('DELETE', `/project-instances/${id}`),
     start:    (id: number)            => request('POST',   `/project-instances/${id}/start`),
-    restart:  (id: number)            => request('POST',   `/project-instances/${id}/restart`),
   },
 
   deploys: {
