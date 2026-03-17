@@ -1,3 +1,6 @@
+# Claude Code
+.claude/
+
 # MasterServer
 MasterServer/node_modules
 MasterServer/dist
