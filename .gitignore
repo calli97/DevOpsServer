@@ -1,0 +1,11 @@
+# MasterServer
+MasterServer/node_modules
+MasterServer/dist
+MasterServer/src/config.ts
+
+# Client
+client/node_modules
+client/dist
+client/.env
+client/.env.local
+client/*.local
