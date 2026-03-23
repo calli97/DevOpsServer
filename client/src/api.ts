@@ -51,4 +51,12 @@ export const api = {
     create:   (data: unknown)         => request('POST',   '/slave-servers', data),
     delete:   (id: number)            => request('DELETE', `/slave-servers/${id}`),
   },
+
+  nginxConfigs: {
+    listByInstance: (instanceId: number)      => request('GET',    `/nginx-configs/by-instance/${instanceId}`),
+    create:         (data: unknown)           => request('POST',   '/nginx-configs', data),
+    runCommands:    (id: number)              => request('POST',   `/nginx-configs/${id}/run-commands`),
+    testConfig:     ()                        => request('POST',   '/nginx-configs/test-config'),
+    reload:         ()                        => request('POST',   '/nginx-configs/reload'),
+  },
 }

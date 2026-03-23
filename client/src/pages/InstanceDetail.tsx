@@ -18,6 +18,23 @@ interface ConfigFile {
   content: string
 }
 
+interface NginxConfig {
+  id: number
+  name: string
+  path: string
+  content: string
+  command: string
+  created: boolean
+}
+
+function parseCommandsForDisplay(command: string): string {
+  try {
+    const arr = JSON.parse(command)
+    if (Array.isArray(arr)) return arr.join('\n')
+  } catch {}
+  return command
+}
+
 interface Instance {
   id: number
   name: string
@@ -35,6 +52,7 @@ interface Instance {
 const emptyDeployForm = { name: '', startPath: '/', startCommands: '', buildCommands: '' }
 const emptyConfigForm = { name: '', relativePath: '.', content: '' }
 const emptyEditForm   = { branch: '', path: '', afterDeployCommands: '', autoUpdate: false }
+const emptyNginxForm  = { name: '', path: '', content: '', commandsText: '' }
 
 export default function InstanceDetail() {
   const { id } = useParams<{ id: string }>()
@@ -72,7 +90,17 @@ export default function InstanceDetail() {
   const [actionLoading, setActionLoading]     = useState<Record<string, boolean>>({})
   const [actionMsg, setActionMsg]             = useState('')
 
-  useEffect(() => { loadInstance() }, [id])
+  const [nginxConfigs, setNginxConfigs]             = useState<NginxConfig[]>([])
+  const [showNginxForm, setShowNginxForm]           = useState(false)
+  const [nginxForm, setNginxForm]                   = useState(emptyNginxForm)
+  const [nginxFormError, setNginxFormError]         = useState('')
+  const [nginxFormSuccess, setNginxFormSuccess]     = useState('')
+  const [nginxSaving, setNginxSaving]               = useState(false)
+  const [nginxActionMsg, setNginxActionMsg]         = useState('')
+  const [nginxActionOk, setNginxActionOk]           = useState(true)
+  const [nginxActionLoading, setNginxActionLoading] = useState<Record<string, boolean>>({})
+
+  useEffect(() => { loadInstance(); loadNginxConfigs() }, [id])
 
   function openEditInstance(inst: Instance) {
     setEditForm({
@@ -282,6 +310,76 @@ export default function InstanceDetail() {
       setConfigError('Request failed')
     } finally {
       setConfigSaving(false)
+    }
+  }
+
+  async function loadNginxConfigs() {
+    const res = await api.nginxConfigs.listByInstance(Number(id)) as { ok: boolean; data: NginxConfig[] }
+    if (res.ok) setNginxConfigs(res.data)
+  }
+
+  async function createNginxConfig(e: React.FormEvent) {
+    e.preventDefault()
+    setNginxFormError('')
+    setNginxFormSuccess('')
+    setNginxSaving(true)
+    try {
+      const commands = nginxForm.commandsText.split('\n').filter(l => l.trim())
+      const res = await api.nginxConfigs.create({
+        name: nginxForm.name,
+        path: nginxForm.path,
+        content: nginxForm.content,
+        command: JSON.stringify(commands),
+        projectInstanceId: Number(id),
+      }) as { ok: boolean; error?: string }
+      if (res.ok) {
+        setShowNginxForm(false)
+        setNginxForm(emptyNginxForm)
+        setNginxFormSuccess('Configuration created successfully.')
+        loadNginxConfigs()
+      } else {
+        setNginxFormError(res.error ?? 'Failed to create nginx config')
+      }
+    } catch {
+      setNginxFormError('Request failed')
+    } finally {
+      setNginxSaving(false)
+    }
+  }
+
+  async function runNginxCommands(configId: number) {
+    setNginxActionLoading(prev => ({ ...prev, [`run-${configId}`]: true }))
+    setNginxActionMsg('')
+    try {
+      const res = await api.nginxConfigs.runCommands(configId) as { ok: boolean; stdout?: string; stderr?: string; error?: string }
+      setNginxActionOk(res.ok)
+      setNginxActionMsg(res.ok ? 'Commands executed successfully.' : (res.stderr || res.error || 'Commands failed.'))
+    } finally {
+      setNginxActionLoading(prev => ({ ...prev, [`run-${configId}`]: false }))
+    }
+  }
+
+  async function testNginxConfig() {
+    setNginxActionLoading(prev => ({ ...prev, test: true }))
+    setNginxActionMsg('')
+    try {
+      const res = await api.nginxConfigs.testConfig() as { ok: boolean; stdout?: string; stderr?: string; error?: string }
+      setNginxActionOk(res.ok)
+      setNginxActionMsg(res.ok ? 'Nginx config test passed.' : (res.stderr || res.error || 'Config test failed.'))
+    } finally {
+      setNginxActionLoading(prev => ({ ...prev, test: false }))
+    }
+  }
+
+  async function reloadNginx() {
+    setNginxActionLoading(prev => ({ ...prev, reload: true }))
+    setNginxActionMsg('')
+    try {
+      const res = await api.nginxConfigs.reload() as { ok: boolean; stdout?: string; stderr?: string; error?: string }
+      setNginxActionOk(res.ok)
+      setNginxActionMsg(res.ok ? 'Nginx reloaded successfully.' : (res.stderr || res.error || 'Reload failed.'))
+    } finally {
+      setNginxActionLoading(prev => ({ ...prev, reload: false }))
     }
   }
 
@@ -626,6 +724,106 @@ export default function InstanceDetail() {
                 </div>
               ))
             )}
+          </div>
+        </div>
+        {/* ── NGINX CONFIGURATIONS ── */}
+        <div className="section">
+          <div className="section-header">
+            <div className="section-title">Nginx Configurations</div>
+            <button className="btn btn-primary" onClick={() => { setShowNginxForm(v => !v); setNginxFormError(''); setNginxFormSuccess('') }}>
+              {showNginxForm ? 'Cancel' : '+ Add Config'}
+            </button>
+          </div>
+
+          {nginxFormSuccess && <div className="banner banner-success" style={{ marginBottom: 12 }}>{nginxFormSuccess}</div>}
+
+          {showNginxForm && (
+            <div className="inline-form">
+              {nginxFormError && <div className="banner banner-error">{nginxFormError}</div>}
+              <form className="form" onSubmit={createNginxConfig}>
+                <div className="form-grid">
+                  <div className="field">
+                    <label>Name</label>
+                    <input className="input" placeholder="myapp.conf" value={nginxForm.name}
+                      onChange={e => setNginxForm(f => ({ ...f, name: e.target.value }))} required />
+                  </div>
+                  <div className="field">
+                    <label>Path</label>
+                    <input className="input" placeholder="/etc/nginx/sites-available" value={nginxForm.path}
+                      onChange={e => setNginxForm(f => ({ ...f, path: e.target.value }))} required />
+                  </div>
+                  <div className="field full">
+                    <label>Content</label>
+                    <textarea className="textarea" placeholder="server { ... }" value={nginxForm.content}
+                      onChange={e => setNginxForm(f => ({ ...f, content: e.target.value }))} required />
+                  </div>
+                  <div className="field full">
+                    <label>Commands <span style={{ fontWeight: 400, textTransform: 'none' }}>(one per line)</span></label>
+                    <textarea className="textarea" placeholder={"ln -s /etc/nginx/sites-available/myapp.conf /etc/nginx/sites-enabled/\nnginx -t"}
+                      value={nginxForm.commandsText}
+                      onChange={e => setNginxForm(f => ({ ...f, commandsText: e.target.value }))} required />
+                  </div>
+                </div>
+                <div className="form-actions">
+                  <button type="button" className="btn btn-ghost" onClick={() => setShowNginxForm(false)}>Cancel</button>
+                  <button type="submit" className="btn btn-primary" disabled={nginxSaving}>
+                    {nginxSaving ? 'Creating…' : 'Create Config'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          <div className="card">
+            {nginxConfigs.length === 0 ? (
+              <div className="empty">No nginx configurations yet.</div>
+            ) : (
+              nginxConfigs.map(nc => (
+                <div key={nc.id}>
+                  <div className="list-item">
+                    <div className="item-info">
+                      <div className="item-name">{nc.name}</div>
+                      <div className="item-meta">path: {nc.path}</div>
+                    </div>
+                    <div className="item-actions">
+                      <span className={`badge ${nc.created ? 'badge-green' : 'badge-gray'}`}>
+                        {nc.created ? 'created' : 'not created'}
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{ padding: '0 16px 16px' }}>
+                    <div style={{ marginBottom: 6 }}>
+                      <button className="btn btn-primary btn-sm"
+                        onClick={() => runNginxCommands(nc.id)}
+                        disabled={nginxActionLoading[`run-${nc.id}`]}>
+                        {nginxActionLoading[`run-${nc.id}`] ? 'Running…' : '▶ Execute Commands'}
+                      </button>
+                    </div>
+                    <textarea className="textarea" readOnly value={parseCommandsForDisplay(nc.command)}
+                      style={{ resize: 'none', cursor: 'default', minHeight: 72 }} />
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {nginxActionMsg && (
+            <div className={`banner ${nginxActionOk ? 'banner-success' : 'banner-error'}`} style={{ marginTop: 12 }}>
+              {nginxActionMsg}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+            <button className="btn btn-ghost"
+              onClick={testNginxConfig}
+              disabled={nginxActionLoading['test']}>
+              {nginxActionLoading['test'] ? 'Testing…' : 'Test Config'}
+            </button>
+            <button className="btn btn-warning"
+              onClick={reloadNginx}
+              disabled={nginxActionLoading['reload']}>
+              {nginxActionLoading['reload'] ? 'Reloading…' : 'Reload Nginx'}
+            </button>
           </div>
         </div>
       </main>
