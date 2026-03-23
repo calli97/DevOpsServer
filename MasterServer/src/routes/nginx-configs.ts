@@ -21,5 +21,8 @@ router.get("/by-instance/:instanceId", async (req, res) => (await getController(
 router.post("/", validate(createNginxConfigSchema), async (req, res) => (await getController()).create(req, res));
 router.put("/:id", validate(idParamSchema, "params"), validate(updateNginxConfigSchema), async (req, res) => (await getController()).update(req, res));
 router.delete("/:id", validate(idParamSchema, "params"), async (req, res) => (await getController()).delete(req, res));
+router.post("/:id/run-commands", validate(idParamSchema, "params"), async (req, res) => (await getController()).runCommands(req, res));
+router.post("/test-config", async (req, res) => (await getController()).testConfig(req, res));
+router.post("/reload", async (req, res) => (await getController()).reload(req, res));
 
 export default router;

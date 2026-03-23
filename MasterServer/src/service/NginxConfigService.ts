@@ -10,6 +10,11 @@ import { logger } from "./LogService";
 const execAsync = promisify(exec);
 
 export class NginxConfigService {
+  async findById(id: number): Promise<NginxConfig | null> {
+    const repository = await getRepository(NginxConfig);
+    return repository.findOne({ where: { id } });
+  }
+
   async findByProjectInstance(instanceId: number): Promise<NginxConfig[]> {
     const repository = await getRepository(NginxConfig);
     return repository.find({

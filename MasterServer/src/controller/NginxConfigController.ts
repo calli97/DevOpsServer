@@ -66,4 +66,46 @@ export class NginxConfigController {
       return res.status(500).json({ ok: false, error: error.message });
     }
   };
+
+  runCommands = async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const nginxConfig = await this.nginxConfigService.findById(Number(id));
+
+      if (!nginxConfig) {
+        return res.status(404).json({ ok: false, error: `NginxConfig with id '${id}' not found` });
+      }
+
+      const { stdout, stderr } = await this.nginxConfigService.runCommands(nginxConfig);
+
+      if (stderr) {
+        return res.status(200).json({ ok: false, stdout, stderr });
+      }
+
+      return res.status(200).json({ ok: true, stdout, stderr });
+    } catch (error) {
+      logger.error("[NginxConfigController] Error running nginx config commands:", error);
+      return res.status(500).json({ ok: false, error: error.message });
+    }
+  };
+
+  testConfig = async (req: Request, res: Response) => {
+    try {
+      const result = await this.nginxConfigService.testConfig();
+      return res.status(200).json(result);
+    } catch (error) {
+      logger.error("[NginxConfigController] Error testing nginx config:", error);
+      return res.status(500).json({ ok: false, error: error.message });
+    }
+  };
+
+  reload = async (req: Request, res: Response) => {
+    try {
+      const result = await this.nginxConfigService.reload();
+      return res.status(200).json(result);
+    } catch (error) {
+      logger.error("[NginxConfigController] Error reloading nginx:", error);
+      return res.status(500).json({ ok: false, error: error.message });
+    }
+  };
 }
