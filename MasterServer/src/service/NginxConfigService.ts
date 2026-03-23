@@ -48,6 +48,20 @@ export class NginxConfigService {
     logger.info(`[NginxConfigService] Written: ${filePath}`);
   }
 
+  async runCommands(nginxConfig: NginxConfig): Promise<{ stdout: string; stderr: string }> {
+    const cmds: string[] = JSON.parse(nginxConfig.command);
+    if (!Array.isArray(cmds) || cmds.length === 0) {
+      throw new Error("command must be a non-empty JSON array of strings");
+    }
+
+    const { stdout, stderr } = await execAsync(cmds.join(" && "));
+
+    logger.info(`[NginxConfigService] runCommands ${nginxConfig.name}:`, stdout);
+    if (stderr) logger.warning(`[NginxConfigService] stderr:`, stderr);
+
+    return { stdout, stderr };
+  }
+
   async testConfig(): Promise<{ ok: boolean; stdout: string; stderr: string }> {
     try {
       const { stdout, stderr } = await execAsync("sudo nginx -t");
