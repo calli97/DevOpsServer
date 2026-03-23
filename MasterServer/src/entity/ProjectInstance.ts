@@ -9,6 +9,7 @@ import Project from "./Project";
 import SlaveServer from "./SlaveServer";
 import ConfigFile from "./ConfigFile";
 import Deploy from "./Deploy";
+import NginxConfig from "./NginxConfig";
 
 @Entity()
 class ProjectInstance {
@@ -50,6 +51,11 @@ class ProjectInstance {
     cascade: true,
   })
   deploys: Deploy[];
+
+  @OneToMany(() => NginxConfig, (nginxConfig) => nginxConfig.projectInstance, {
+    cascade: true,
+  })
+  nginxConfigs: NginxConfig[];
 }
 
 export default ProjectInstance;
