@@ -47,7 +47,44 @@ export class NginxConfigService {
       throw new NotFoundError("NginxConfig", id);
     }
 
-    Object.assign(nginxConfig, data);
+    const pathChanged = data.path !== undefined && data.path !== nginxConfig.path;
+    const nameChanged = data.name !== undefined && data.name !== nginxConfig.name;
+    const contentChanged = data.content !== undefined && data.content !== nginxConfig.content;
+    const fileNeedsUpdate = pathChanged || nameChanged || contentChanged;
+
+    if (fileNeedsUpdate) {
+      const newPath = data.path ?? nginxConfig.path;
+
+      try {
+        await fs.access(newPath);
+      } catch {
+        throw new Error(`Path does not exist: ${newPath}`);
+      }
+
+      if (pathChanged || nameChanged) {
+        const oldFilePath = path.join(nginxConfig.path, nginxConfig.name);
+        try {
+          await fs.unlink(oldFilePath);
+        } catch (error) {
+          throw new Error(`Failed to delete original config file: ${error.message}`);
+        }
+      }
+
+      Object.assign(nginxConfig, data);
+
+      try {
+        await this.writeFile(nginxConfig);
+      } catch (error) {
+        throw new Error(`Failed to write config file: ${error.message}`);
+      }
+
+      if (!nginxConfig.created) {
+        nginxConfig.created = true;
+      }
+    } else {
+      Object.assign(nginxConfig, data);
+    }
+
     return repository.save(nginxConfig);
   }
 
