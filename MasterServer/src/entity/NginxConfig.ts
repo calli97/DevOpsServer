@@ -18,6 +18,9 @@ class NginxConfig {
   @Column({ type: "text", nullable: false })
   command: string;
 
+  @Column({ default: false })
+  created: boolean;
+
   @ManyToOne(() => ProjectInstance, (instance) => instance.nginxConfigs, { nullable: false })
   projectInstance: ProjectInstance;
 }
