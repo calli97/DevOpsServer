@@ -1,9 +1,13 @@
 import * as fs from "fs/promises";
 import * as path from "path";
+import { exec } from "child_process";
+import { promisify } from "util";
 import NginxConfig from "../entity/NginxConfig";
 import { getRepository } from "../dbConnection";
 import { NotFoundError } from "../errors/AppError";
 import { logger } from "./LogService";
+
+const execAsync = promisify(exec);
 
 export class NginxConfigService {
   async findByProjectInstance(instanceId: number): Promise<NginxConfig[]> {
@@ -42,5 +46,29 @@ export class NginxConfigService {
     const filePath = path.join(nginxConfig.path, nginxConfig.name);
     await fs.writeFile(filePath, nginxConfig.content, "utf-8");
     logger.info(`[NginxConfigService] Written: ${filePath}`);
+  }
+
+  async testConfig(): Promise<{ ok: boolean; stdout: string; stderr: string }> {
+    try {
+      const { stdout, stderr } = await execAsync("sudo nginx -t");
+      logger.info("[NginxConfigService] nginx -t:", stdout);
+      if (stderr) logger.warning("[NginxConfigService] nginx -t stderr:", stderr);
+      return { ok: true, stdout, stderr };
+    } catch (error) {
+      logger.error("[NginxConfigService] nginx -t failed:", error);
+      return { ok: false, stdout: error.stdout ?? "", stderr: error.stderr ?? error.message };
+    }
+  }
+
+  async reload(): Promise<{ ok: boolean; stdout: string; stderr: string }> {
+    try {
+      const { stdout, stderr } = await execAsync("sudo systemctl reload nginx");
+      logger.info("[NginxConfigService] nginx reload:", stdout);
+      if (stderr) logger.warning("[NginxConfigService] nginx reload stderr:", stderr);
+      return { ok: true, stdout, stderr };
+    } catch (error) {
+      logger.error("[NginxConfigService] nginx reload failed:", error);
+      return { ok: false, stdout: error.stdout ?? "", stderr: error.stderr ?? error.message };
+    }
   }
 }
