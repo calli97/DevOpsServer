@@ -21,6 +21,9 @@ class Deploy {
   @Column({ nullable: false, default: false })
   started: boolean;
 
+  @Column({ nullable: false, default: false })
+  isStaticSite: boolean;
+
   @ManyToOne(() => ProjectInstance, (instance) => instance.deploys, { nullable: false })
   projectInstance: ProjectInstance;
 }

@@ -91,6 +91,9 @@ export class DeployService {
     logger.success(
       `[DeployService] Build completed for deploy ${deploy.name} [ID: ${deploy.id}]`,
     );
+    if (deploy.isStaticSite) {
+      return buildResponse;
+    }
     return await this.pm2Service.start(
       deploy.name,
       deploy.startCommands,
@@ -104,6 +107,9 @@ export class DeployService {
   ): Promise<{ stdout: string; stderr: string }> {
     let buildResponse = await this.runBuildCommands(projectPath, deploy);
     if (buildResponse.stderr && buildResponse.stderr != "") {
+      return buildResponse;
+    }
+    if (deploy.isStaticSite) {
       return buildResponse;
     }
     return await this.pm2Service.restart(
