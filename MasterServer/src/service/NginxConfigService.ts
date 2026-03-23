@@ -21,6 +21,21 @@ export class NginxConfigService {
   async create(data: Partial<NginxConfig>): Promise<NginxConfig> {
     const repository = await getRepository(NginxConfig);
     const nginxConfig = repository.create(data);
+    await repository.save(nginxConfig);
+
+    try {
+      await fs.access(nginxConfig.path);
+    } catch {
+      throw new Error(`Path does not exist: ${nginxConfig.path}`);
+    }
+
+    try {
+      await this.writeFile(nginxConfig);
+    } catch (error) {
+      throw new Error(`Failed to create config file: ${error.message}`);
+    }
+
+    nginxConfig.created = true;
     return repository.save(nginxConfig);
   }
 
