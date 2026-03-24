@@ -49,12 +49,13 @@ export class DeployController {
   update = async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const { name, startPath, buildCommands, startCommands } = req.body;
+      const { name, startPath, buildCommands, startCommands, isStaticSite } = req.body;
       const deploy = await this.deployService.updateById(Number(id), {
         name,
         startPath,
         buildCommands,
         startCommands,
+        isStaticSite,
       });
 
       if (!deploy) {
