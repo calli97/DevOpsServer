@@ -9,6 +9,7 @@ interface Deploy {
   startCommands: string
   buildCommands: string | null
   started: boolean
+  isStaticSite: boolean
 }
 
 interface ConfigFile {
@@ -49,7 +50,7 @@ interface Instance {
   configFiles: ConfigFile[]
 }
 
-const emptyDeployForm = { name: '', startPath: '/', startCommands: '', buildCommands: '' }
+const emptyDeployForm = { name: '', startPath: '/', startCommands: '', buildCommands: '', isStaticSite: false }
 const emptyConfigForm = { name: '', relativePath: '.', content: '' }
 const emptyEditForm   = { branch: '', path: '', afterDeployCommands: '', autoUpdate: false }
 const emptyNginxForm  = { name: '', path: '', content: '', commandsText: '' }
@@ -83,7 +84,7 @@ export default function InstanceDetail() {
   const [editConfigSaving, setEditConfigSaving]   = useState(false)
 
   const [editingDeploy, setEditingDeploy]   = useState<Deploy | null>(null)
-  const [editDeployForm, setEditDeployForm] = useState({ name: '', startPath: '', startCommands: '', buildCommands: '' })
+  const [editDeployForm, setEditDeployForm] = useState({ name: '', startPath: '', startCommands: '', buildCommands: '', isStaticSite: false })
   const [editDeployError, setEditDeployError] = useState('')
   const [editDeploySaving, setEditDeploySaving] = useState(false)
 
@@ -144,6 +145,7 @@ export default function InstanceDetail() {
       startPath: d.startPath,
       startCommands: d.startCommands,
       buildCommands: d.buildCommands ?? '',
+      isStaticSite: d.isStaticSite,
     })
     setEditDeployError('')
   }
@@ -158,6 +160,7 @@ export default function InstanceDetail() {
         name: editDeployForm.name,
         startPath: editDeployForm.startPath,
         startCommands: editDeployForm.startCommands,
+        isStaticSite: editDeployForm.isStaticSite,
       }
       if (editDeployForm.buildCommands) body.buildCommands = editDeployForm.buildCommands
       const res = await api.deploys.update(editingDeploy.id, body) as { ok: boolean; error?: string }
@@ -272,6 +275,7 @@ export default function InstanceDetail() {
         startPath: deployForm.startPath,
         startCommands: deployForm.startCommands,
         projectInstanceId: Number(id),
+        isStaticSite: deployForm.isStaticSite,
       }
       if (deployForm.buildCommands) body.buildCommands = deployForm.buildCommands
 
@@ -521,6 +525,13 @@ export default function InstanceDetail() {
                     <input className="input" placeholder='["npm install","npm run build"]' value={deployForm.buildCommands}
                       onChange={e => setDeployForm(f => ({ ...f, buildCommands: e.target.value }))} />
                   </div>
+                  <div className="field full">
+                    <div className="checkbox-row">
+                      <input type="checkbox" id="df-static" checked={deployForm.isStaticSite}
+                        onChange={e => setDeployForm(f => ({ ...f, isStaticSite: e.target.checked }))} />
+                      <label htmlFor="df-static">Static site</label>
+                    </div>
+                  </div>
                 </div>
                 <div className="form-actions">
                   <button type="button" className="btn btn-ghost" onClick={() => setShowDeployForm(false)}>Cancel</button>
@@ -590,6 +601,13 @@ export default function InstanceDetail() {
                             <label>Build Commands <span style={{ fontWeight: 400, textTransform: 'none' }}>(optional — JSON array)</span></label>
                             <input className="input" placeholder='["npm install","npm run build"]' value={editDeployForm.buildCommands}
                               onChange={e => setEditDeployForm(f => ({ ...f, buildCommands: e.target.value }))} />
+                          </div>
+                          <div className="field full">
+                            <div className="checkbox-row">
+                              <input type="checkbox" id="edf-static" checked={editDeployForm.isStaticSite}
+                                onChange={e => setEditDeployForm(f => ({ ...f, isStaticSite: e.target.checked }))} />
+                              <label htmlFor="edf-static">Static site</label>
+                            </div>
                           </div>
                         </div>
                         <div className="form-actions">
