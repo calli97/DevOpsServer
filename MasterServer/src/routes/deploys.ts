@@ -2,6 +2,7 @@ import { Router } from "express";
 import { DeployService } from "../service/DeployService";
 import { GitHubService } from "../service/GitHubService";
 import PM2Service from "../service/PM2Service";
+import { ConfigFileService } from "../service/ConfigFileService";
 import { DeployController } from "../controller/DeployController";
 import { getRepository } from "../dbConnection";
 import Deploy from "../entity/Deploy";
@@ -18,7 +19,8 @@ async function getController() {
     const deployRepository = await getRepository(Deploy);
     const pm2Service = new PM2Service();
     const githubService = new GitHubService();
-    const deployService = new DeployService(deployRepository, pm2Service, githubService);
+    const configFileService = new ConfigFileService();
+    const deployService = new DeployService(deployRepository, pm2Service, githubService, configFileService);
     controller = new DeployController(deployService);
   }
   return controller;

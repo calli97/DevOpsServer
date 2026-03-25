@@ -101,6 +101,12 @@ export default function InstanceDetail() {
   const [nginxActionOk, setNginxActionOk]           = useState(true)
   const [nginxActionLoading, setNginxActionLoading] = useState<Record<string, boolean>>({})
 
+  const [viewingNginxConfig, setViewingNginxConfig]   = useState<NginxConfig | null>(null)
+  const [editingNginxConfig, setEditingNginxConfig]   = useState<NginxConfig | null>(null)
+  const [editNginxForm, setEditNginxForm]             = useState({ name: '', path: '', content: '', commandsText: '' })
+  const [editNginxError, setEditNginxError]           = useState('')
+  const [editNginxSaving, setEditNginxSaving]         = useState(false)
+
   useEffect(() => { loadInstance(); loadNginxConfigs() }, [id])
 
   function openEditInstance(inst: Instance) {
@@ -314,6 +320,44 @@ export default function InstanceDetail() {
       setConfigError('Request failed')
     } finally {
       setConfigSaving(false)
+    }
+  }
+
+  function openEditNginxConfig(nc: NginxConfig) {
+    setEditingNginxConfig(nc)
+    setEditNginxForm({
+      name: nc.name,
+      path: nc.path,
+      content: nc.content,
+      commandsText: parseCommandsForDisplay(nc.command),
+    })
+    setEditNginxError('')
+    setViewingNginxConfig(null)
+  }
+
+  async function saveNginxConfig(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editingNginxConfig) return
+    setEditNginxError('')
+    setEditNginxSaving(true)
+    try {
+      const commands = editNginxForm.commandsText.split('\n').filter(l => l.trim())
+      const res = await api.nginxConfigs.update(editingNginxConfig.id, {
+        name: editNginxForm.name,
+        path: editNginxForm.path,
+        content: editNginxForm.content,
+        command: JSON.stringify(commands),
+      }) as { ok: boolean; error?: string }
+      if (res.ok) {
+        setEditingNginxConfig(null)
+        loadNginxConfigs()
+      } else {
+        setEditNginxError(res.error ?? 'Failed to update nginx config')
+      }
+    } catch {
+      setEditNginxError('Request failed')
+    } finally {
+      setEditNginxSaving(false)
     }
   }
 
@@ -807,19 +851,88 @@ export default function InstanceDetail() {
                       <span className={`badge ${nc.created ? 'badge-green' : 'badge-gray'}`}>
                         {nc.created ? 'created' : 'not created'}
                       </span>
-                    </div>
-                  </div>
-                  <div style={{ padding: '0 16px 16px' }}>
-                    <div style={{ marginBottom: 6 }}>
                       <button className="btn btn-primary btn-sm"
                         onClick={() => runNginxCommands(nc.id)}
                         disabled={nginxActionLoading[`run-${nc.id}`]}>
-                        {nginxActionLoading[`run-${nc.id}`] ? 'Running…' : '▶ Execute Commands'}
+                        {nginxActionLoading[`run-${nc.id}`] ? 'Running…' : '▶ Execute'}
+                      </button>
+                      <button className="btn btn-ghost btn-sm"
+                        onClick={() => {
+                          if (editingNginxConfig?.id === nc.id) return
+                          setViewingNginxConfig(viewingNginxConfig?.id === nc.id ? null : nc)
+                        }}>
+                        {viewingNginxConfig?.id === nc.id ? 'Hide' : '👁 View'}
+                      </button>
+                      <button className="btn btn-ghost btn-sm"
+                        onClick={() => editingNginxConfig?.id === nc.id ? setEditingNginxConfig(null) : openEditNginxConfig(nc)}>
+                        {editingNginxConfig?.id === nc.id ? 'Cancel' : '✏ Edit'}
                       </button>
                     </div>
-                    <textarea className="textarea" readOnly value={parseCommandsForDisplay(nc.command)}
-                      style={{ resize: 'none', cursor: 'default', minHeight: 72 }} />
                   </div>
+                  {viewingNginxConfig?.id === nc.id && editingNginxConfig?.id !== nc.id && (
+                    <div style={{ padding: '0 16px 16px' }}>
+                      <div style={{ marginBottom: 4, fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Content</div>
+                      <pre style={{
+                        margin: '0 0 12px',
+                        padding: 12,
+                        background: 'var(--bg)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 6,
+                        fontSize: 12,
+                        lineHeight: 1.6,
+                        overflowX: 'auto',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-all',
+                        color: 'var(--text)',
+                      }}>{nc.content}</pre>
+                      <div style={{ marginBottom: 4, fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Commands</div>
+                      <pre style={{
+                        margin: 0,
+                        padding: 12,
+                        background: 'var(--bg)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 6,
+                        fontSize: 12,
+                        lineHeight: 1.6,
+                        color: 'var(--text)',
+                      }}>{parseCommandsForDisplay(nc.command)}</pre>
+                    </div>
+                  )}
+                  {editingNginxConfig?.id === nc.id && (
+                    <div style={{ padding: '0 16px 16px', borderTop: '1px solid var(--border)' }}>
+                      {editNginxError && <div className="banner banner-error" style={{ margin: '12px 0 8px' }}>{editNginxError}</div>}
+                      <form className="form" style={{ marginTop: 12 }} onSubmit={saveNginxConfig}>
+                        <div className="form-grid">
+                          <div className="field">
+                            <label>Name</label>
+                            <input className="input" value={editNginxForm.name}
+                              onChange={e => setEditNginxForm(f => ({ ...f, name: e.target.value }))} required />
+                          </div>
+                          <div className="field">
+                            <label>Path</label>
+                            <input className="input" value={editNginxForm.path}
+                              onChange={e => setEditNginxForm(f => ({ ...f, path: e.target.value }))} required />
+                          </div>
+                          <div className="field full">
+                            <label>Content</label>
+                            <textarea className="textarea" value={editNginxForm.content}
+                              onChange={e => setEditNginxForm(f => ({ ...f, content: e.target.value }))} required />
+                          </div>
+                          <div className="field full">
+                            <label>Commands <span style={{ fontWeight: 400, textTransform: 'none' }}>(one per line)</span></label>
+                            <textarea className="textarea" value={editNginxForm.commandsText}
+                              onChange={e => setEditNginxForm(f => ({ ...f, commandsText: e.target.value }))} required />
+                          </div>
+                        </div>
+                        <div className="form-actions">
+                          <button type="button" className="btn btn-ghost" onClick={() => setEditingNginxConfig(null)}>Cancel</button>
+                          <button type="submit" className="btn btn-primary" disabled={editNginxSaving}>
+                            {editNginxSaving ? 'Saving…' : 'Save Changes'}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
                 </div>
               ))
             )}

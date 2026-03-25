@@ -4,6 +4,7 @@ import { Repository } from "typeorm";
 import Deploy from "../entity/Deploy";
 import PM2Service from "./PM2Service";
 import { GitHubService } from "./GitHubService";
+import { ConfigFileService } from "./ConfigFileService";
 import { logger } from "./LogService";
 import path from "path";
 
@@ -14,6 +15,7 @@ export class DeployService {
     private readonly deployRepository: Repository<Deploy>,
     private readonly pm2Service: PM2Service,
     private readonly githubService: GitHubService,
+    private readonly configFileService: ConfigFileService,
   ) {}
 
   async findAll(): Promise<Deploy[]> {
@@ -91,6 +93,9 @@ export class DeployService {
     logger.success(
       `[DeployService] Build completed for deploy ${deploy.name} [ID: ${deploy.id}]`,
     );
+    if (deploy.projectInstance) {
+      await this.configFileService.writeFilesForInstance(deploy.projectInstance, projectPath);
+    }
     if (deploy.isStaticSite) {
       return buildResponse;
     }
@@ -108,6 +113,9 @@ export class DeployService {
     let buildResponse = await this.runBuildCommands(projectPath, deploy);
     if (buildResponse.stderr && buildResponse.stderr != "") {
       return buildResponse;
+    }
+    if (deploy.projectInstance) {
+      await this.configFileService.writeFilesForInstance(deploy.projectInstance, projectPath);
     }
     if (deploy.isStaticSite) {
       return buildResponse;

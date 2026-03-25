@@ -55,6 +55,7 @@ export const api = {
   nginxConfigs: {
     listByInstance: (instanceId: number)      => request('GET',    `/nginx-configs/by-instance/${instanceId}`),
     create:         (data: unknown)           => request('POST',   '/nginx-configs', data),
+    update:         (id: number, data: unknown) => request('PUT',  `/nginx-configs/${id}`, data),
     runCommands:    (id: number)              => request('POST',   `/nginx-configs/${id}/run-commands`),
     testConfig:     ()                        => request('POST',   '/nginx-configs/test-config'),
     reload:         ()                        => request('POST',   '/nginx-configs/reload'),
