@@ -93,8 +93,9 @@ export class DeployService {
     logger.success(
       `[DeployService] Build completed for deploy ${deploy.name} [ID: ${deploy.id}]`,
     );
-    if (deploy.projectInstance) {
-      await this.configFileService.writeFilesForInstance(deploy.projectInstance, projectPath);
+    const projectInstance = await this.resolveProjectInstance(deploy);
+    if (projectInstance) {
+      await this.configFileService.writeFilesForInstance(projectInstance, projectPath);
     }
     if (deploy.isStaticSite) {
       return buildResponse;
@@ -114,8 +115,9 @@ export class DeployService {
     if (buildResponse.stderr && buildResponse.stderr != "") {
       return buildResponse;
     }
-    if (deploy.projectInstance) {
-      await this.configFileService.writeFilesForInstance(deploy.projectInstance, projectPath);
+    const projectInstance = await this.resolveProjectInstance(deploy);
+    if (projectInstance) {
+      await this.configFileService.writeFilesForInstance(projectInstance, projectPath);
     }
     if (deploy.isStaticSite) {
       return buildResponse;
@@ -134,6 +136,17 @@ export class DeployService {
       deploy.name,
       path.join(projectPath, deploy.startPath),
     );
+  }
+
+  private async resolveProjectInstance(deploy: Deploy) {
+    if (deploy.projectInstance) {
+      return deploy.projectInstance;
+    }
+    const full = await this.deployRepository.findOne({
+      where: { id: deploy.id },
+      relations: { projectInstance: true },
+    });
+    return full?.projectInstance ?? null;
   }
 
   private getInstanceDir(deploy: Deploy): string {

@@ -24,7 +24,7 @@ async function getController() {
     const pm2Service = new PM2Service();
     const githubService = new GitHubService();
     const configFileService = new ConfigFileService();
-    const deployService = new DeployService(deployRepository, pm2Service, githubService);
+    const deployService = new DeployService(deployRepository, pm2Service, githubService, configFileService);
     const projectInstanceService = new ProjectInstanceService(deployService, configFileService, githubService);
     controller = new ProjectInstanceController(projectInstanceService);
   }
