@@ -22,7 +22,9 @@ export class DeployController {
       const deploy = await this.deployService.findById(Number(id));
 
       if (!deploy) {
-        return res.status(404).json({ ok: false, error: `Deploy with id '${id}' not found` });
+        return res
+          .status(404)
+          .json({ ok: false, error: `Deploy with id '${id}' not found` });
       }
 
       return res.status(200).json({ ok: true, data: deploy });
@@ -49,7 +51,8 @@ export class DeployController {
   update = async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const { name, startPath, buildCommands, startCommands, isStaticSite } = req.body;
+      const { name, startPath, buildCommands, startCommands, isStaticSite } =
+        req.body;
       const deploy = await this.deployService.updateById(Number(id), {
         name,
         startPath,
@@ -59,7 +62,9 @@ export class DeployController {
       });
 
       if (!deploy) {
-        return res.status(404).json({ ok: false, error: `Deploy with id '${id}' not found` });
+        return res
+          .status(404)
+          .json({ ok: false, error: `Deploy with id '${id}' not found` });
       }
 
       return res.status(200).json({ ok: true, data: deploy });
@@ -75,7 +80,9 @@ export class DeployController {
       const deleted = await this.deployService.delete(Number(id));
 
       if (!deleted) {
-        return res.status(404).json({ ok: false, error: `Deploy with id '${id}' not found` });
+        return res
+          .status(404)
+          .json({ ok: false, error: `Deploy with id '${id}' not found` });
       }
 
       return res.status(200).json({ ok: true, message: "Deploy deleted" });
@@ -91,7 +98,9 @@ export class DeployController {
       const deploy = await this.deployService.startOrRestart(Number(id));
 
       if (!deploy) {
-        return res.status(404).json({ ok: false, error: `Deploy with id '${id}' not found` });
+        return res
+          .status(404)
+          .json({ ok: false, error: `Deploy with id '${id}' not found` });
       }
 
       return res.status(200).json({ ok: true, data: deploy });
@@ -107,7 +116,9 @@ export class DeployController {
       const deploy = await this.deployService.stopById(Number(id));
 
       if (!deploy) {
-        return res.status(404).json({ ok: false, error: `Deploy with id '${id}' not found` });
+        return res
+          .status(404)
+          .json({ ok: false, error: `Deploy with id '${id}' not found` });
       }
 
       return res.status(200).json({ ok: true, data: deploy });

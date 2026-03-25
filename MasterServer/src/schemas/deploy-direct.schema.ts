@@ -13,6 +13,7 @@ export const updateDeployDirectSchema = z.object({
   startPath: z.string().min(1, "startPath cannot be empty").optional(),
   buildCommands: z.string().nullable().optional(),
   startCommands: z.string().min(1, "startCommands cannot be empty").optional(),
+  isStaticSite: z.boolean().optional(),
 });
 
 export type CreateDeployDirectDto = z.infer<typeof createDeployDirectSchema>;
