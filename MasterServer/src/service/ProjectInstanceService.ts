@@ -171,7 +171,7 @@ export class ProjectInstanceService {
       where: {
         branch: branch,
         project: {
-          repository: repositoryName,
+          name: repositoryName,
         },
       },
     });
