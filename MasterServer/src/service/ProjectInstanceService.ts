@@ -125,6 +125,18 @@ export class ProjectInstanceService {
     const succeeded: Deploy[] = [];
     const errors: { deploy: Deploy; error: Error }[] = [];
 
+    if (!instance.project || !instance.deploys) {
+      const repository = await getRepository(ProjectInstance);
+      const full = await repository.findOne({
+        where: { id: instance.id },
+        relations: { project: true, slaveServer: true, configFiles: true, deploys: true },
+      });
+      if (!full?.project) {
+        throw new Error(`ProjectInstance ${instance.id} has no associated project`);
+      }
+      instance = full;
+    }
+
     if (instance.slaveServer) {
       // Send information to slave server
       return [];
