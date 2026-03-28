@@ -24,6 +24,8 @@ export class GitHubWebhookController {
           branch,
         );
 
+      logger.info(`[Webhook] Projects filtered: ${projects}`);
+
       for (const project of projects) {
         if (project.autoUpdate) {
           logger.info(`[Webhook] Auto-updating project: ${project.name}`);
