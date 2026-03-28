@@ -11,13 +11,15 @@ export class GitHubWebhookController {
   constructor(private projectInstanceService: ProjectInstanceService) {}
 
   receiveWebhook = async (req: Request, res: Response) => {
-    const payload: WebhookPayload = JSON.parse((req.body as Buffer).toString("utf-8"));
+    const payload: WebhookPayload = JSON.parse(
+      (req.body as Buffer).toString("utf-8"),
+    );
     logger.info("Webhook content: ", payload);
 
     if (isCommitPusshedWebhook(payload)) {
       const pushPayload = payload as WebhookPayloadPushCommit;
       const branch = getBranch(pushPayload);
-      const repository = pushPayload.repository.clone_url;
+      const repository = pushPayload.repository.name;
 
       const projects =
         await this.projectInstanceService.getByRepositoryNameAndBranch(
@@ -25,7 +27,9 @@ export class GitHubWebhookController {
           branch,
         );
 
-      logger.info(`[Webhook] Projects filtered: ${projects}`);
+      logger.info(
+        `[Webhook] Projects filtered for [Project - ${repository}]  [Branch - ${branch}]: ${projects}`,
+      );
 
       for (const project of projects) {
         if (project.autoUpdate) {
