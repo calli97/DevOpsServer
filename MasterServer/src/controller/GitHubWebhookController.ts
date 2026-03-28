@@ -11,7 +11,7 @@ export class GitHubWebhookController {
   constructor(private projectInstanceService: ProjectInstanceService) {}
 
   receiveWebhook = async (req: Request, res: Response) => {
-    const payload: WebhookPayload = req.body;
+    const payload: WebhookPayload = JSON.parse((req.body as Buffer).toString("utf-8"));
     logger.info("Webhook content: ", payload);
 
     if (isCommitPusshedWebhook(payload)) {
