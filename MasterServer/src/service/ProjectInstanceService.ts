@@ -134,6 +134,7 @@ export class ProjectInstanceService {
       instance.path,
       this.githubService.getProjectDirectoryName(instance.project.cloneLine),
     );
+    console.log("INSTANCE DIR:", instanceDir);
 
     await execAsync(`git pull origin ${instance.branch}`, { cwd: instanceDir });
     await execAsync(`git switch ${instance.branch}`, { cwd: instanceDir });
