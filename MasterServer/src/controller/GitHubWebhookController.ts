@@ -30,6 +30,8 @@ export class GitHubWebhookController {
       logger.info(
         `[Webhook] Projects filtered for [Project - ${repository}]  [Branch - ${branch}]: ${projects}`,
       );
+      console.log("FINDED:", projects);
+      console.log("JSON: ", JSON.stringify(projects));
 
       for (const project of projects) {
         if (project.autoUpdate) {
