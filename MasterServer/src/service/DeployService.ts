@@ -82,10 +82,23 @@ export class DeployService {
     return { stdout, stderr };
   }
 
+  private async gitPull(
+    projectPath: string,
+    branch: string,
+  ): Promise<void> {
+    await execAsync(`git pull origin ${branch}`, { cwd: projectPath });
+    await execAsync(`git switch ${branch}`, { cwd: projectPath });
+  }
+
   async start(
     projectPath: string,
     deploy: Deploy,
   ): Promise<{ stdout: string; stderr: string }> {
+    const projectInstance = await this.resolveProjectInstance(deploy);
+    if (projectInstance) {
+      await this.gitPull(projectPath, projectInstance.branch);
+      await this.configFileService.writeFilesForInstance(projectInstance, projectPath);
+    }
     let buildResponse = await this.runBuildCommands(projectPath, deploy);
     if (buildResponse.stderr && buildResponse.stderr != "") {
       return buildResponse;
@@ -93,10 +106,6 @@ export class DeployService {
     logger.success(
       `[DeployService] Build completed for deploy ${deploy.name} [ID: ${deploy.id}]`,
     );
-    const projectInstance = await this.resolveProjectInstance(deploy);
-    if (projectInstance) {
-      await this.configFileService.writeFilesForInstance(projectInstance, projectPath);
-    }
     if (deploy.isStaticSite) {
       return buildResponse;
     }
@@ -111,13 +120,14 @@ export class DeployService {
     projectPath: string,
     deploy: Deploy,
   ): Promise<{ stdout: string; stderr: string }> {
+    const projectInstance = await this.resolveProjectInstance(deploy);
+    if (projectInstance) {
+      await this.gitPull(projectPath, projectInstance.branch);
+      await this.configFileService.writeFilesForInstance(projectInstance, projectPath);
+    }
     let buildResponse = await this.runBuildCommands(projectPath, deploy);
     if (buildResponse.stderr && buildResponse.stderr != "") {
       return buildResponse;
-    }
-    const projectInstance = await this.resolveProjectInstance(deploy);
-    if (projectInstance) {
-      await this.configFileService.writeFilesForInstance(projectInstance, projectPath);
     }
     if (deploy.isStaticSite) {
       return buildResponse;
