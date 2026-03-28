@@ -12,6 +12,7 @@ export class GitHubWebhookController {
 
   receiveWebhook = async (req: Request, res: Response) => {
     const payload: WebhookPayload = req.body;
+    logger.info("Webhook content: ", payload);
 
     if (isCommitPusshedWebhook(payload)) {
       const pushPayload = payload as WebhookPayloadPushCommit;
