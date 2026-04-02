@@ -12,7 +12,10 @@ export class ProjectInstanceController {
       const instances = await this.projectInstanceService.findAll();
       return res.status(200).json({ ok: true, data: instances });
     } catch (error) {
-      logger.error("[ProjectInstanceController] Error listing instances:", error);
+      logger.error(
+        "[ProjectInstanceController] Error listing instances:",
+        error,
+      );
       return res.status(500).json({ ok: false, error: error.message });
     }
   };
@@ -26,7 +29,10 @@ export class ProjectInstanceController {
       if (error.statusCode === 404) {
         return res.status(404).json({ ok: false, error: error.message });
       }
-      logger.error("[ProjectInstanceController] Error getting instance:", error);
+      logger.error(
+        "[ProjectInstanceController] Error getting instance:",
+        error,
+      );
       return res.status(500).json({ ok: false, error: error.message });
     }
   };
@@ -37,17 +43,23 @@ export class ProjectInstanceController {
       const instance = await this.projectInstanceService.create({
         ...rest,
         project: { id: projectId } as Project,
-        slaveServer: slaveServerId ? ({ id: slaveServerId } as SlaveServer) : null,
+        slaveServer: slaveServerId
+          ? ({ id: slaveServerId } as SlaveServer)
+          : null,
       });
 
       const response: Record<string, any> = { ok: true, data: instance };
       if (!instance.cloned) {
-        response.warning = "Failed to clone repository. You can retry by updating the instance.";
+        response.warning =
+          "Failed to clone repository. You can retry by updating the instance.";
       }
 
       return res.status(201).json(response);
     } catch (error) {
-      logger.error("[ProjectInstanceController] Error creating instance:", error);
+      logger.error(
+        "[ProjectInstanceController] Error creating instance:",
+        error,
+      );
       return res.status(500).json({ ok: false, error: error.message });
     }
   };
@@ -55,19 +67,38 @@ export class ProjectInstanceController {
   update = async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const { slaveServerId, name, branch, path, autoUpdate, afterDeployCommands } = req.body;
+      const {
+        slaveServerId,
+        name,
+        branch,
+        path,
+        autoUpdate,
+        afterDeployCommands,
+      } = req.body;
 
-      const data: Record<string, any> = { name, branch, path, autoUpdate, afterDeployCommands };
+      const data: Record<string, any> = {
+        name,
+        branch,
+        path,
+        autoUpdate,
+        afterDeployCommands,
+      };
 
       if (slaveServerId !== undefined) {
-        data.slaveServer = slaveServerId ? ({ id: slaveServerId } as SlaveServer) : null;
+        data.slaveServer = slaveServerId
+          ? ({ id: slaveServerId } as SlaveServer)
+          : null;
       }
 
-      const instance = await this.projectInstanceService.updateById(Number(id), data);
+      const instance = await this.projectInstanceService.updateById(
+        Number(id),
+        data,
+      );
 
       const response: Record<string, any> = { ok: true, data: instance };
       if (!instance.cloned) {
-        response.warning = "Failed to clone repository. You can retry by updating the instance.";
+        response.warning =
+          "Failed to clone repository. You can retry by updating the instance.";
       }
 
       return res.status(200).json(response);
@@ -75,7 +106,10 @@ export class ProjectInstanceController {
       if (error.statusCode === 404) {
         return res.status(404).json({ ok: false, error: error.message });
       }
-      logger.error("[ProjectInstanceController] Error updating instance:", error);
+      logger.error(
+        "[ProjectInstanceController] Error updating instance:",
+        error,
+      );
       return res.status(500).json({ ok: false, error: error.message });
     }
   };
@@ -86,12 +120,22 @@ export class ProjectInstanceController {
       const deleted = await this.projectInstanceService.delete(Number(id));
 
       if (!deleted) {
-        return res.status(404).json({ ok: false, error: `ProjectInstance with id '${id}' not found` });
+        return res
+          .status(404)
+          .json({
+            ok: false,
+            error: `ProjectInstance with id '${id}' not found`,
+          });
       }
 
-      return res.status(200).json({ ok: true, message: "ProjectInstance deleted" });
+      return res
+        .status(200)
+        .json({ ok: true, message: "ProjectInstance deleted" });
     } catch (error) {
-      logger.error("[ProjectInstanceController] Error deleting instance:", error);
+      logger.error(
+        "[ProjectInstanceController] Error deleting instance:",
+        error,
+      );
       return res.status(500).json({ ok: false, error: error.message });
     }
   };
@@ -100,7 +144,8 @@ export class ProjectInstanceController {
     try {
       const { id } = req.params;
       const instance = await this.projectInstanceService.findById(Number(id));
-      const errors = await this.projectInstanceService.startOrRestartDeploys(instance);
+      const errors =
+        await this.projectInstanceService.startOrRestartDeploys(instance);
 
       if (errors.length > 0) {
         return res.status(500).json({
@@ -118,7 +163,10 @@ export class ProjectInstanceController {
       if (error.statusCode === 404) {
         return res.status(404).json({ ok: false, error: error.message });
       }
-      logger.error("[ProjectInstanceController] Error starting deploys:", error);
+      logger.error(
+        "[ProjectInstanceController] Error starting deploys:",
+        error,
+      );
       return res.status(500).json({ ok: false, error: error.message });
     }
   };
