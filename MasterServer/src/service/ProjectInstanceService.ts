@@ -70,6 +70,10 @@ export class ProjectInstanceService {
       relations: { project: true },
     });
 
+    if (!full) {
+      throw new NotFoundError("ProjectInstance", instance.id);
+    }
+
     try {
       await execAsync(`git clone ${full.project.cloneLine}`, {
         cwd: full.path,
