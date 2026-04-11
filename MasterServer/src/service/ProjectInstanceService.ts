@@ -2,12 +2,14 @@ import { promisify } from "util";
 import { exec } from "child_process";
 import path from "path";
 import ProjectInstance from "../entity/ProjectInstance";
+import NginxConfig from "../entity/NginxConfig";
 import Deploy from "../entity/Deploy";
 import { getRepository } from "../dbConnection";
 import { NotFoundError } from "../errors/AppError";
 import { DeployService } from "./DeployService";
 import { ConfigFileService } from "./ConfigFileService";
 import { GitHubService } from "./GitHubService";
+import { SlaveServerClient } from "./SlaveServerClient";
 import { logger } from "./LogService";
 
 const execAsync = promisify(exec);
@@ -17,6 +19,7 @@ export class ProjectInstanceService {
     private readonly deployService: DeployService,
     private readonly configFileService: ConfigFileService,
     private readonly githubService: GitHubService,
+    private readonly slaveServerClient: SlaveServerClient,
   ) {}
 
   async findAll(): Promise<ProjectInstance[]> {
@@ -67,11 +70,30 @@ export class ProjectInstanceService {
     const repository = await getRepository(ProjectInstance);
     const full = await repository.findOne({
       where: { id: instance.id },
-      relations: { project: true },
+      relations: { project: true, slaveServer: true },
     });
 
     if (!full) {
       throw new NotFoundError("ProjectInstance", instance.id);
+    }
+
+    if (full.slaveServer) {
+      try {
+        logger.info(`[ProjectInstanceService] Delegating clone to slave server ${full.slaveServer.nombre}`);
+        const response = await this.slaveServerClient.clone(
+          full.slaveServer,
+          full.project.cloneLine,
+          full.path,
+        );
+        full.cloned = response.cloned;
+        return repository.save(full);
+      } catch (error) {
+        logger.warning(
+          `[ProjectInstanceService] Failed to clone on slave server for instance ${full.id}:`,
+          error,
+        );
+        return full;
+      }
     }
 
     try {
@@ -133,7 +155,13 @@ export class ProjectInstanceService {
       const repository = await getRepository(ProjectInstance);
       const full = await repository.findOne({
         where: { id: instance.id },
-        relations: { project: true, slaveServer: true, configFiles: true, deploys: true },
+        relations: {
+          project: true,
+          slaveServer: true,
+          configFiles: true,
+          deploys: true,
+          nginxConfigs: true,
+        },
       });
       if (!full?.project) {
         throw new Error(`ProjectInstance ${instance.id} has no associated project`);
@@ -142,8 +170,42 @@ export class ProjectInstanceService {
     }
 
     if (instance.slaveServer) {
-      // Send information to slave server
-      return [];
+      const nginxConfigRepository = await getRepository(NginxConfig);
+      const nginxConfigs = await nginxConfigRepository.find({
+        where: { projectInstance: { id: instance.id } },
+      });
+
+      logger.info(`[ProjectInstanceService] Delegating deploy to slave server ${instance.slaveServer.nombre}`);
+
+      const response = await this.slaveServerClient.deploy(instance.slaveServer, {
+        instancePath: instance.path,
+        branch: instance.branch,
+        cloneLine: instance.project.cloneLine,
+        deploys: instance.deploys.map((d) => ({
+          name: d.name,
+          startPath: d.startPath,
+          buildCommands: d.buildCommands ?? null,
+          startCommands: d.startCommands,
+          started: d.started,
+          isStaticSite: d.isStaticSite,
+        })),
+        configFiles: (instance.configFiles ?? []).map((cf) => ({
+          name: cf.name,
+          relativePath: cf.relativePath,
+          content: cf.content,
+        })),
+        nginxConfigs: nginxConfigs.map((nc) => ({
+          name: nc.name,
+          path: nc.path,
+          content: nc.content,
+          command: nc.command,
+        })),
+      });
+
+      return response.errors.map((e) => ({
+        deploy: instance.deploys.find((d) => d.name === e.deployName) ?? instance.deploys[0],
+        error: new Error(e.error),
+      }));
     }
 
     const instanceDir = path.join(

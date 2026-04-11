@@ -4,6 +4,7 @@ import { ProjectInstanceService } from "../service/ProjectInstanceService";
 import { DeployService } from "../service/DeployService";
 import { ConfigFileService } from "../service/ConfigFileService";
 import { GitHubService } from "../service/GitHubService";
+import { SlaveServerClient } from "../service/SlaveServerClient";
 import PM2Service from "../service/PM2Service";
 import { getRepository } from "../dbConnection";
 import Deploy from "../entity/Deploy";
@@ -18,8 +19,9 @@ async function getController() {
     const pm2Service = new PM2Service();
     const githubService = new GitHubService();
     const configFileService = new ConfigFileService();
+    const slaveServerClient = new SlaveServerClient();
     const deployService = new DeployService(deployRepository, pm2Service, githubService, configFileService);
-    const projectInstanceService = new ProjectInstanceService(deployService, configFileService, githubService);
+    const projectInstanceService = new ProjectInstanceService(deployService, configFileService, githubService, slaveServerClient);
     controller = new GitHubWebhookController(projectInstanceService);
   }
   return controller;
