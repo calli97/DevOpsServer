@@ -10,7 +10,7 @@ const configFileSchema = z.object({
 const slaveServerSchema = z.object({
   id: z.number().int().positive().optional(),
   nombre: z.string().min(1, "nombre is required").optional(),
-  direccionIp: z.string().min(1, "direccionIp is required").optional(),
+  host: z.string().min(1, "host is required").optional(),
   puerto: z.number().int().positive("puerto must be a positive integer").optional(),
   apiKey: z.string().min(1, "apiKey is required").optional(),
 }).refine(
@@ -18,7 +18,7 @@ const slaveServerSchema = z.object({
     // If id is provided, other fields are optional (reference to existing)
     if (data.id) return true;
     // If no id, all fields are required (creating new)
-    return data.nombre && data.direccionIp && data.puerto && data.apiKey;
+    return data.nombre && data.host && data.apiKey;
   },
   { message: "Either provide id for existing SlaveServer or all fields for new one" }
 );

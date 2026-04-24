@@ -293,7 +293,7 @@ function slaveServersHandlers() {
   document.getElementById('ss-create-send').onclick = () =>
     send('POST', '/slave-servers', [], [
       ['nombre',      'ss-c-nombre'],
-      ['direccionIp', 'ss-c-ip'],
+      ['host',        'ss-c-host'],
       ['puerto',      'ss-c-puerto', 'number'],
       ['apiKey',      'ss-c-apikey'],
     ], 'ss-create-res');
@@ -301,7 +301,7 @@ function slaveServersHandlers() {
   document.getElementById('ss-update-send').onclick = () =>
     send('PUT', '/slave-servers/:id', [['id','ss-u-id']], [
       ['nombre',      'ss-u-nombre'],
-      ['direccionIp', 'ss-u-ip'],
+      ['host',        'ss-u-host'],
       ['puerto',      'ss-u-puerto', 'number'],
       ['apiKey',      'ss-u-apikey'],
     ], 'ss-update-res');

@@ -51,7 +51,8 @@ export interface SlaveDeployResponse {
 
 export class SlaveServerClient {
   private getBaseUrl(slaveServer: SlaveServer): string {
-    return `http://${slaveServer.direccionIp}:${slaveServer.puerto}`;
+    const port = slaveServer.puerto ? `:${slaveServer.puerto}` : "";
+    return `${slaveServer.host}${port}`;
   }
 
   private getHeaders(slaveServer: SlaveServer): Record<string, string> {

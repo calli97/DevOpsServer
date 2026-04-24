@@ -162,8 +162,8 @@ A **NginxConfig** is a vhost that the SlaveServer writes to disk and reloads in 
 
 Fields of a **SlaveServer**:
 - `nombre` — identifier name
-- `direccionIp` — IP or hostname of the slave
-- `puerto` — port the SlaveServer listens on
+- `host` — base URL of the slave, including protocol (e.g. `http://192.168.1.10` or `https://slave.example.com`)
+- `puerto` — port the SlaveServer listens on (optional; omit if the port is already in the host URL or using a default port)
 - `apiKey` — the API key configured on that SlaveServer
 
 ### GitHub Webhook (`/github/webhook`)

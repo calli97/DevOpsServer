@@ -13,8 +13,8 @@ interface Project {
 interface SlaveServer {
   id: number
   nombre: string
-  direccionIp: string
-  puerto: number
+  host: string
+  puerto: number | null
 }
 
 export default function Projects() {
@@ -33,7 +33,7 @@ export default function Projects() {
   const [slaves, setSlaves]           = useState<SlaveServer[]>([])
   const [slavesLoading, setSlavesLoading] = useState(true)
   const [showSlaveForm, setShowSlaveForm] = useState(false)
-  const [slaveForm, setSlaveForm] = useState({ nombre: '', direccionIp: '', puerto: '', apiKey: '' })
+  const [slaveForm, setSlaveForm] = useState({ nombre: '', host: '', puerto: '', apiKey: '' })
   const [slaveSaving, setSlaveSaving] = useState(false)
   const [slaveError, setSlaveError]   = useState('')
 
@@ -93,11 +93,11 @@ export default function Projects() {
     try {
       const res = await api.slaveServers.create({
         ...slaveForm,
-        puerto: Number(slaveForm.puerto),
+        ...(slaveForm.puerto ? { puerto: Number(slaveForm.puerto) } : {}),
       }) as { ok: boolean; error?: string }
       if (res.ok) {
         setShowSlaveForm(false)
-        setSlaveForm({ nombre: '', direccionIp: '', puerto: '', apiKey: '' })
+        setSlaveForm({ nombre: '', host: '', puerto: '', apiKey: '' })
         loadSlaves()
       } else {
         setSlaveError(res.error ?? 'Failed to create slave server')
@@ -231,14 +231,14 @@ export default function Projects() {
                         onChange={e => setSlaveForm(f => ({ ...f, nombre: e.target.value }))} required />
                     </div>
                     <div className="field">
-                      <label>IP Address</label>
-                      <input className="input" placeholder="192.168.1.100" value={slaveForm.direccionIp}
-                        onChange={e => setSlaveForm(f => ({ ...f, direccionIp: e.target.value }))} required />
+                      <label>Host</label>
+                      <input className="input" placeholder="https://slave.example.com" value={slaveForm.host}
+                        onChange={e => setSlaveForm(f => ({ ...f, host: e.target.value }))} required />
                     </div>
                     <div className="field">
-                      <label>Port</label>
+                      <label>Port <span className="optional">(optional)</span></label>
                       <input className="input" type="number" placeholder="3041" value={slaveForm.puerto}
-                        onChange={e => setSlaveForm(f => ({ ...f, puerto: e.target.value }))} required />
+                        onChange={e => setSlaveForm(f => ({ ...f, puerto: e.target.value }))} />
                     </div>
                     <div className="field">
                       <label>API Key</label>
@@ -266,7 +266,7 @@ export default function Projects() {
                   <div className="list-item" key={s.id}>
                     <div className="item-info">
                       <div className="item-name">{s.nombre}</div>
-                      <div className="item-meta">{s.direccionIp}:{s.puerto}</div>
+                      <div className="item-meta">{s.host}{s.puerto ? `:${s.puerto}` : ''}</div>
                     </div>
                     <div className="item-actions">
                       <span className="badge badge-gray">ID: {s.id}</span>

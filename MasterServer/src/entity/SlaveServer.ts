@@ -10,10 +10,10 @@ class SlaveServer {
   nombre: string;
 
   @Column({ nullable: false })
-  direccionIp: string;
+  host: string;
 
-  @Column({ nullable: false })
-  puerto: number;
+  @Column({ nullable: true })
+  puerto: number | null;
 
   @Column({ nullable: false })
   apiKey: string;
