@@ -18,5 +18,5 @@
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": false
   },
-  "exclude": ["src/cli2.ts"]
+  "exclude": ["src/cli2.ts", "dist"]
 }
