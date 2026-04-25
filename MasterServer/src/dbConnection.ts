@@ -1,13 +1,15 @@
 import { DataSource, DataSourceOptions, EntityTarget } from "typeorm";
 import config from "./config";
+import ConfigFile from "./entity/ConfigFile";
 import Deploy from "./entity/Deploy";
-import path from "path";
+import NginxConfig from "./entity/NginxConfig";
+import Project from "./entity/Project";
+import ProjectInstance from "./entity/ProjectInstance";
+import SlaveServer from "./entity/SlaveServer";
 
 export const dataSource = new DataSource({
   ...config.database,
-  entities: [
-    path.join(__dirname, "entity/**/*.js"),
-  ],
+  entities: [ConfigFile, Deploy, NginxConfig, Project, ProjectInstance, SlaveServer],
   synchronize: true,
 } as DataSourceOptions);
 
