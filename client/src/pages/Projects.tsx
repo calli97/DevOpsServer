@@ -37,6 +37,10 @@ export default function Projects() {
   const [slaveSaving, setSlaveSaving] = useState(false)
   const [slaveError, setSlaveError]   = useState('')
   const [slaveStatuses, setSlaveStatuses] = useState<Record<number, 'checking' | 'online' | 'offline'>>({});
+  const [editingSlaveId, setEditingSlaveId]   = useState<number | null>(null)
+  const [editSlaveForm, setEditSlaveForm]     = useState({ nombre: '', host: '', puerto: '', apiKey: '' })
+  const [editSlaveSaving, setEditSlaveSaving] = useState(false)
+  const [editSlaveError, setEditSlaveError]   = useState('')
 
   useEffect(() => { loadProjects() }, [])
   useEffect(() => { if (tab === 'slave-servers') loadSlaves() }, [tab])
@@ -107,6 +111,43 @@ export default function Projects() {
       setSlaveError('Request failed')
     } finally {
       setSlaveSaving(false)
+    }
+  }
+
+  function startEditSlave(slave: SlaveServer) {
+    setEditingSlaveId(slave.id)
+    setEditSlaveForm({
+      nombre: slave.nombre,
+      host: slave.host,
+      puerto: slave.puerto != null ? String(slave.puerto) : '',
+      apiKey: '',
+    })
+    setEditSlaveError('')
+    setShowSlaveForm(false)
+  }
+
+  async function updateSlave(e: React.FormEvent, id: number) {
+    e.preventDefault()
+    setEditSlaveError('')
+    setEditSlaveSaving(true)
+    try {
+      const payload: Record<string, unknown> = {
+        nombre: editSlaveForm.nombre,
+        host: editSlaveForm.host,
+      }
+      if (editSlaveForm.puerto) payload.puerto = Number(editSlaveForm.puerto)
+      if (editSlaveForm.apiKey) payload.apiKey = editSlaveForm.apiKey
+      const res = await api.slaveServers.update(id, payload) as { ok: boolean; error?: string }
+      if (res.ok) {
+        setEditingSlaveId(null)
+        loadSlaves()
+      } else {
+        setEditSlaveError(res.error ?? 'Failed to update slave server')
+      }
+    } catch {
+      setEditSlaveError('Request failed')
+    } finally {
+      setEditSlaveSaving(false)
     }
   }
 
@@ -274,21 +315,58 @@ export default function Projects() {
                 <div className="empty">No slave servers yet.</div>
               ) : (
                 slaves.map(s => (
-                  <div className="list-item" key={s.id}>
-                    <div className="item-info">
-                      <div className="item-name">{s.nombre}</div>
-                      <div className="item-meta">{s.host}{s.puerto ? `:${s.puerto}` : ''}</div>
+                  editingSlaveId === s.id ? (
+                    <div key={s.id} style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
+                      {editSlaveError && <div className="banner banner-error">{editSlaveError}</div>}
+                      <form className="form" onSubmit={e => updateSlave(e, s.id)}>
+                        <div className="form-grid">
+                          <div className="field">
+                            <label>Name</label>
+                            <input className="input" value={editSlaveForm.nombre}
+                              onChange={e => setEditSlaveForm(f => ({ ...f, nombre: e.target.value }))} required />
+                          </div>
+                          <div className="field">
+                            <label>Host</label>
+                            <input className="input" value={editSlaveForm.host}
+                              onChange={e => setEditSlaveForm(f => ({ ...f, host: e.target.value }))} required />
+                          </div>
+                          <div className="field">
+                            <label>Port <span className="optional">(optional)</span></label>
+                            <input className="input" type="number" placeholder="3041" value={editSlaveForm.puerto}
+                              onChange={e => setEditSlaveForm(f => ({ ...f, puerto: e.target.value }))} />
+                          </div>
+                          <div className="field">
+                            <label>API Key <span className="optional">(leave blank to keep current)</span></label>
+                            <input className="input" type="password" placeholder="unchanged" value={editSlaveForm.apiKey}
+                              onChange={e => setEditSlaveForm(f => ({ ...f, apiKey: e.target.value }))} />
+                          </div>
+                        </div>
+                        <div className="form-actions">
+                          <button type="button" className="btn btn-ghost" onClick={() => setEditingSlaveId(null)}>Cancel</button>
+                          <button type="submit" className="btn btn-primary" disabled={editSlaveSaving}>
+                            {editSlaveSaving ? 'Saving…' : 'Save Changes'}
+                          </button>
+                        </div>
+                      </form>
                     </div>
-                    <div className="item-actions">
-                      <span className="badge badge-gray">ID: {s.id}</span>
-                      {slaveStatuses[s.id] === 'online'   && <span className="badge badge-green">Online</span>}
-                      {slaveStatuses[s.id] === 'offline'  && <span className="badge badge-red">Offline</span>}
-                      <button className="btn btn-secondary btn-sm" disabled={slaveStatuses[s.id] === 'checking'} onClick={() => checkSlaveStatus(s.id)}>
-                        {slaveStatuses[s.id] === 'checking' ? 'Checking…' : 'Check Status'}
-                      </button>
-                      <button className="btn btn-danger btn-sm" onClick={() => deleteSlave(s.id)}>Delete</button>
+                  ) : (
+                    <div className="list-item" key={s.id}>
+                      <div className="item-info">
+                        <div className="item-name">{s.nombre}</div>
+                        <div className="item-meta">{s.host}{s.puerto ? `:${s.puerto}` : ''}</div>
+                      </div>
+                      <div className="item-actions">
+                        <span className="badge badge-gray">ID: {s.id}</span>
+                        {slaveStatuses[s.id] === 'online'  && <span className="badge badge-green">Online</span>}
+                        {slaveStatuses[s.id] === 'offline' && <span className="badge badge-red">Offline</span>}
+                        <button className="btn btn-secondary btn-sm" disabled={slaveStatuses[s.id] === 'checking'} onClick={() => checkSlaveStatus(s.id)}>
+                          {slaveStatuses[s.id] === 'checking' ? 'Checking…' : 'Check Status'}
+                        </button>
+                        <button className="btn btn-ghost btn-sm" onClick={() => startEditSlave(s)}>Edit</button>
+                        <button className="btn btn-danger btn-sm" onClick={() => deleteSlave(s.id)}>Delete</button>
+                      </div>
                     </div>
-                  </div>
+                  )
                 ))
               )}
             </div>

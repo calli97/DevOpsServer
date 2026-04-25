@@ -62,18 +62,32 @@ export class SlaveServerClient {
     };
   }
 
-  async status(slaveServer: SlaveServer): Promise<{ ok: boolean; error?: string }> {
+  async status(
+    slaveServer: SlaveServer,
+  ): Promise<{ ok: boolean; error?: string }> {
     const url = `${this.getBaseUrl(slaveServer)}/status`;
 
-    logger.info(`[SlaveServerClient] Checking status of ${slaveServer.nombre} (${url})`);
+    logger.info(
+      `[SlaveServerClient] Checking status of ${slaveServer.nombre} (${url})`,
+    );
 
     try {
-      const response = await fetch(url, { headers: this.getHeaders(slaveServer) });
-      const data = await response.json() as { ok: boolean };
+      const response = await fetch(url, {
+        headers: this.getHeaders(slaveServer),
+      });
+      console.log("Response Log:", response);
+      const data = (await response.json()) as { ok: boolean };
       return data;
     } catch (error) {
-      logger.warning(`[SlaveServerClient] Status check failed for ${slaveServer.nombre}:`, error);
-      return { ok: false, error: error instanceof Error ? error.message : String(error) };
+      logger.warning(
+        `[SlaveServerClient] Status check failed for ${slaveServer.nombre}:`,
+        error,
+      );
+      console.log("ERROR:", error);
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   }
 
@@ -85,7 +99,9 @@ export class SlaveServerClient {
     const url = `${this.getBaseUrl(slaveServer)}/clone`;
     const body: SlaveCloneRequest = { cloneLine, path: instancePath };
 
-    logger.info(`[SlaveServerClient] Sending clone request to ${slaveServer.nombre} (${url})`);
+    logger.info(
+      `[SlaveServerClient] Sending clone request to ${slaveServer.nombre} (${url})`,
+    );
 
     const response = await fetch(url, {
       method: "POST",
@@ -93,12 +109,17 @@ export class SlaveServerClient {
       body: JSON.stringify(body),
     });
 
-    const data = await response.json() as SlaveCloneResponse;
+    const data = (await response.json()) as SlaveCloneResponse;
 
     if (!response.ok) {
-      logger.error(`[SlaveServerClient] Clone request failed (${response.status}):`, data);
+      logger.error(
+        `[SlaveServerClient] Clone request failed (${response.status}):`,
+        data,
+      );
     } else {
-      logger.success(`[SlaveServerClient] Clone request succeeded for ${slaveServer.nombre}`);
+      logger.success(
+        `[SlaveServerClient] Clone request succeeded for ${slaveServer.nombre}`,
+      );
     }
 
     return data;
@@ -110,7 +131,9 @@ export class SlaveServerClient {
   ): Promise<SlaveDeployResponse> {
     const url = `${this.getBaseUrl(slaveServer)}/deploy`;
 
-    logger.info(`[SlaveServerClient] Sending deploy request to ${slaveServer.nombre} (${url})`);
+    logger.info(
+      `[SlaveServerClient] Sending deploy request to ${slaveServer.nombre} (${url})`,
+    );
 
     const response = await fetch(url, {
       method: "POST",
@@ -118,14 +141,22 @@ export class SlaveServerClient {
       body: JSON.stringify(request),
     });
 
-    const data = await response.json() as SlaveDeployResponse;
+    const data = (await response.json()) as SlaveDeployResponse;
 
     if (!response.ok) {
-      logger.error(`[SlaveServerClient] Deploy request failed (${response.status}):`, data);
+      logger.error(
+        `[SlaveServerClient] Deploy request failed (${response.status}):`,
+        data,
+      );
     } else if (data.errors.length > 0) {
-      logger.warning(`[SlaveServerClient] Deploy completed with errors on ${slaveServer.nombre}:`, data.errors);
+      logger.warning(
+        `[SlaveServerClient] Deploy completed with errors on ${slaveServer.nombre}:`,
+        data.errors,
+      );
     } else {
-      logger.success(`[SlaveServerClient] Deploy succeeded on ${slaveServer.nombre}`);
+      logger.success(
+        `[SlaveServerClient] Deploy succeeded on ${slaveServer.nombre}`,
+      );
     }
 
     return data;
