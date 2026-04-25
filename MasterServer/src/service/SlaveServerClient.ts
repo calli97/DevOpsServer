@@ -62,6 +62,21 @@ export class SlaveServerClient {
     };
   }
 
+  async status(slaveServer: SlaveServer): Promise<{ ok: boolean; error?: string }> {
+    const url = `${this.getBaseUrl(slaveServer)}/status`;
+
+    logger.info(`[SlaveServerClient] Checking status of ${slaveServer.nombre} (${url})`);
+
+    try {
+      const response = await fetch(url, { headers: this.getHeaders(slaveServer) });
+      const data = await response.json() as { ok: boolean };
+      return data;
+    } catch (error) {
+      logger.warning(`[SlaveServerClient] Status check failed for ${slaveServer.nombre}:`, error);
+      return { ok: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+
   async clone(
     slaveServer: SlaveServer,
     cloneLine: string,

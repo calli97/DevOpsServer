@@ -47,9 +47,10 @@ export const api = {
   },
 
   slaveServers: {
-    list:     ()                      => request('GET',    '/slave-servers'),
-    create:   (data: unknown)         => request('POST',   '/slave-servers', data),
-    delete:   (id: number)            => request('DELETE', `/slave-servers/${id}`),
+    list:        ()             => request('GET',    '/slave-servers'),
+    create:      (data: unknown) => request('POST',  '/slave-servers', data),
+    delete:      (id: number)   => request('DELETE', `/slave-servers/${id}`),
+    checkStatus: (id: number)   => request<{ ok: boolean; online: boolean; error?: string }>('GET', `/slave-servers/${id}/status`),
   },
 
   nginxConfigs: {

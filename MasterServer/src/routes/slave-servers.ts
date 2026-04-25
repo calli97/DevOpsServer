@@ -18,6 +18,7 @@ async function getController() {
 }
 
 router.get("/", async (req, res) => (await getController()).listAll(req, res));
+router.get("/:id/status", validate(idParamSchema, "params"), async (req, res) => (await getController()).checkStatus(req, res));
 router.get("/:id", validate(idParamSchema, "params"), async (req, res) => (await getController()).getById(req, res));
 router.post("/", validate(createSlaveServerSchema), async (req, res) => (await getController()).create(req, res));
 router.put("/:id", validate(idParamSchema, "params"), validate(updateSlaveServerSchema), async (req, res) => (await getController()).update(req, res));

@@ -1,8 +1,11 @@
 import { Request, Response } from "express";
 import { SlaveServerService } from "../service/SlaveServerService";
+import { SlaveServerClient } from "../service/SlaveServerClient";
 import { logger } from "../service/LogService";
 
 export class SlaveServerController {
+  private client = new SlaveServerClient();
+
   constructor(private slaveServerService: SlaveServerService) {}
 
   listAll = async (req: Request, res: Response) => {
@@ -49,6 +52,21 @@ export class SlaveServerController {
         return res.status(404).json({ ok: false, error: error.message });
       }
       logger.error("[SlaveServerController] Error updating slave server:", error);
+      return res.status(500).json({ ok: false, error: error.message });
+    }
+  };
+
+  checkStatus = async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const slaveServer = await this.slaveServerService.findById(Number(id));
+      const result = await this.client.status(slaveServer);
+      return res.status(200).json({ ok: true, online: result.ok, error: result.error });
+    } catch (error) {
+      if (error.statusCode === 404) {
+        return res.status(404).json({ ok: false, error: error.message });
+      }
+      logger.error("[SlaveServerController] Error checking slave status:", error);
       return res.status(500).json({ ok: false, error: error.message });
     }
   };

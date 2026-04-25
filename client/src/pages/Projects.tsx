@@ -36,6 +36,7 @@ export default function Projects() {
   const [slaveForm, setSlaveForm] = useState({ nombre: '', host: '', puerto: '', apiKey: '' })
   const [slaveSaving, setSlaveSaving] = useState(false)
   const [slaveError, setSlaveError]   = useState('')
+  const [slaveStatuses, setSlaveStatuses] = useState<Record<number, 'checking' | 'online' | 'offline'>>({});
 
   useEffect(() => { loadProjects() }, [])
   useEffect(() => { if (tab === 'slave-servers') loadSlaves() }, [tab])
@@ -113,6 +114,16 @@ export default function Projects() {
     if (!confirm('Delete this slave server?')) return
     await api.slaveServers.delete(id)
     loadSlaves()
+  }
+
+  async function checkSlaveStatus(id: number) {
+    setSlaveStatuses(s => ({ ...s, [id]: 'checking' }))
+    try {
+      const res = await api.slaveServers.checkStatus(id)
+      setSlaveStatuses(s => ({ ...s, [id]: res.online ? 'online' : 'offline' }))
+    } catch {
+      setSlaveStatuses(s => ({ ...s, [id]: 'offline' }))
+    }
   }
 
   function logout() {
@@ -270,6 +281,11 @@ export default function Projects() {
                     </div>
                     <div className="item-actions">
                       <span className="badge badge-gray">ID: {s.id}</span>
+                      {slaveStatuses[s.id] === 'online'   && <span className="badge badge-green">Online</span>}
+                      {slaveStatuses[s.id] === 'offline'  && <span className="badge badge-red">Offline</span>}
+                      <button className="btn btn-secondary btn-sm" disabled={slaveStatuses[s.id] === 'checking'} onClick={() => checkSlaveStatus(s.id)}>
+                        {slaveStatuses[s.id] === 'checking' ? 'Checking…' : 'Check Status'}
+                      </button>
                       <button className="btn btn-danger btn-sm" onClick={() => deleteSlave(s.id)}>Delete</button>
                     </div>
                   </div>
