@@ -71,7 +71,14 @@ npm run build
 
 echo "🚀 Iniciando servidor con PM2..."
 pm2 start "node ./dist/index.js" --name slave-server
-pm2 startup
+
+echo "🔧 Configurando PM2 para arrancar con el sistema..."
+STARTUP_CMD=$(pm2 startup | grep "sudo env" | tr -d '\n')
+if [ -n "$STARTUP_CMD" ]; then
+  eval "$STARTUP_CMD"
+else
+  echo "⚠️  No se pudo obtener el comando de startup de PM2. Ejecutá manualmente: pm2 startup"
+fi
 pm2 save
 
 echo
