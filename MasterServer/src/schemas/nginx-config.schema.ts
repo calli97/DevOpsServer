@@ -15,5 +15,10 @@ export const updateNginxConfigSchema = z.object({
   command: z.string().min(1, "command cannot be empty").optional(),
 });
 
+export const forceSyncSchema = z.object({
+  source: z.enum(["stored", "current"]),
+});
+
 export type CreateNginxConfigDto = z.infer<typeof createNginxConfigSchema>;
 export type UpdateNginxConfigDto = z.infer<typeof updateNginxConfigSchema>;
+export type ForceSyncDto = z.infer<typeof forceSyncSchema>;

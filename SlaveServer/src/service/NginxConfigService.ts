@@ -46,6 +46,17 @@ export class NginxConfigService {
     }
   }
 
+  async readFile(filePath: string, name: string): Promise<string> {
+    const fullPath = path.join(filePath, name);
+    return fs.readFile(fullPath, "utf-8");
+  }
+
+  async writeFileOnly(filePath: string, name: string, content: string): Promise<void> {
+    const fullPath = path.join(filePath, name);
+    await fs.writeFile(fullPath, content, "utf-8");
+    logger.info(`[NginxConfigService] Written: ${fullPath}`);
+  }
+
   async reload(): Promise<{ ok: boolean; stdout: string; stderr: string }> {
     try {
       const { stdout, stderr } = await execAsync("sudo systemctl reload nginx");

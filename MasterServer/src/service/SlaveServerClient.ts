@@ -50,6 +50,17 @@ export interface SlaveDeployResponse {
   errors: { deployName: string; error: string }[];
 }
 
+export interface SlaveNginxReadResponse {
+  ok: boolean;
+  content?: string;
+  error?: string;
+}
+
+export interface SlaveNginxWriteResponse {
+  ok: boolean;
+  error?: string;
+}
+
 export class SlaveServerClient {
   private getBaseUrl(slaveServer: SlaveServer): string {
     const port = slaveServer.puerto ? `:${slaveServer.puerto}` : "";
@@ -132,6 +143,47 @@ export class SlaveServerClient {
     }
 
     return data;
+  }
+
+  async readNginxConfig(
+    slaveServer: SlaveServer,
+    filePath: string,
+    name: string,
+  ): Promise<SlaveNginxReadResponse> {
+    const routePath = "/nginx-config/read";
+    const params = new URLSearchParams({ path: filePath, name });
+    const url = `${this.getBaseUrl(slaveServer)}${routePath}?${params}`;
+
+    try {
+      const response = await fetch(url, {
+        headers: this.getHeaders(slaveServer, "GET", routePath),
+      });
+      return response.json() as Promise<SlaveNginxReadResponse>;
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+
+  async writeNginxConfig(
+    slaveServer: SlaveServer,
+    filePath: string,
+    name: string,
+    content: string,
+  ): Promise<SlaveNginxWriteResponse> {
+    const routePath = "/nginx-config/write";
+    const bodyStr = JSON.stringify({ path: filePath, name, content });
+    const url = `${this.getBaseUrl(slaveServer)}${routePath}`;
+
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: this.getHeaders(slaveServer, "POST", routePath, bodyStr),
+        body: bodyStr,
+      });
+      return response.json() as Promise<SlaveNginxWriteResponse>;
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : String(error) };
+    }
   }
 
   async deploy(

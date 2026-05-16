@@ -6,13 +6,23 @@ import NginxConfig from "../entity/NginxConfig";
 import { getRepository } from "../dbConnection";
 import { NotFoundError } from "../errors/AppError";
 import { logger } from "./LogService";
+import { SlaveServerClient } from "./SlaveServerClient";
 
 const execAsync = promisify(exec);
 
 export class NginxConfigService {
+  constructor(private slaveClient = new SlaveServerClient()) {}
   async findById(id: number): Promise<NginxConfig | null> {
     const repository = await getRepository(NginxConfig);
     return repository.findOne({ where: { id } });
+  }
+
+  async findByIdWithRelations(id: number): Promise<NginxConfig | null> {
+    const repository = await getRepository(NginxConfig);
+    return repository.findOne({
+      where: { id },
+      relations: ["projectInstance", "projectInstance.slaveServer"],
+    });
   }
 
   async findByProjectInstance(instanceId: number): Promise<NginxConfig[]> {
@@ -140,6 +150,72 @@ export class NginxConfigService {
     } catch (error) {
       logger.error("[NginxConfigService] nginx reload failed:", error);
       return { ok: false, stdout: error.stdout ?? "", stderr: error.stderr ?? error.message };
+    }
+  }
+
+  async syncStatus(id: number): Promise<{ ok: boolean; inSync: boolean; error?: string }> {
+    const nginxConfig = await this.findByIdWithRelations(id);
+    if (!nginxConfig) {
+      return { ok: false, inSync: false, error: `NginxConfig ${id} not found` };
+    }
+
+    const slave = nginxConfig.projectInstance?.slaveServer ?? null;
+
+    try {
+      let diskContent: string;
+
+      if (slave) {
+        const result = await this.slaveClient.readNginxConfig(slave, nginxConfig.path, nginxConfig.name);
+        if (!result.ok || result.content === undefined) {
+          return { ok: false, inSync: false, error: result.error ?? "Failed to read file from slave" };
+        }
+        diskContent = result.content;
+      } else {
+        const filePath = path.join(nginxConfig.path, nginxConfig.name);
+        diskContent = await fs.readFile(filePath, "utf-8");
+      }
+
+      return { ok: true, inSync: diskContent === nginxConfig.content };
+    } catch (error) {
+      return { ok: false, inSync: false, error: error.message };
+    }
+  }
+
+  async forceSync(id: number, source: "stored" | "current"): Promise<{ ok: boolean; error?: string }> {
+    const nginxConfig = await this.findByIdWithRelations(id);
+    if (!nginxConfig) {
+      return { ok: false, error: `NginxConfig ${id} not found` };
+    }
+
+    const slave = nginxConfig.projectInstance?.slaveServer ?? null;
+
+    try {
+      if (source === "stored") {
+        if (slave) {
+          return this.slaveClient.writeNginxConfig(slave, nginxConfig.path, nginxConfig.name, nginxConfig.content);
+        }
+        await this.writeFile(nginxConfig);
+        return { ok: true };
+      } else {
+        let diskContent: string;
+
+        if (slave) {
+          const result = await this.slaveClient.readNginxConfig(slave, nginxConfig.path, nginxConfig.name);
+          if (!result.ok || result.content === undefined) {
+            return { ok: false, error: result.error ?? "Failed to read file from slave" };
+          }
+          diskContent = result.content;
+        } else {
+          const filePath = path.join(nginxConfig.path, nginxConfig.name);
+          diskContent = await fs.readFile(filePath, "utf-8");
+        }
+
+        const repository = await getRepository(NginxConfig);
+        await repository.update(id, { content: diskContent });
+        return { ok: true };
+      }
+    } catch (error) {
+      return { ok: false, error: error.message };
     }
   }
 }

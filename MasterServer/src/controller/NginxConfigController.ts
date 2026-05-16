@@ -108,4 +108,27 @@ export class NginxConfigController {
       return res.status(500).json({ ok: false, error: error.message });
     }
   };
+
+  syncStatus = async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const result = await this.nginxConfigService.syncStatus(Number(id));
+      return res.status(result.ok ? 200 : 500).json(result);
+    } catch (error) {
+      logger.error("[NginxConfigController] Error checking sync status:", error);
+      return res.status(500).json({ ok: false, inSync: false, error: error.message });
+    }
+  };
+
+  forceSync = async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { source } = req.body as { source: "stored" | "current" };
+      const result = await this.nginxConfigService.forceSync(Number(id), source);
+      return res.status(result.ok ? 200 : 500).json(result);
+    } catch (error) {
+      logger.error("[NginxConfigController] Error forcing sync:", error);
+      return res.status(500).json({ ok: false, error: error.message });
+    }
+  };
 }

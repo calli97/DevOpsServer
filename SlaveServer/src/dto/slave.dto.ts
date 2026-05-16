@@ -83,6 +83,17 @@ export const nginxConfigDtoSchema = z.object({
   command: z.string().min(1),
 });
 
+export const nginxReadQuerySchema = z.object({
+  path: z.string().min(1),
+  name: z.string().min(1),
+});
+
+export const nginxWriteBodySchema = z.object({
+  path: z.string().min(1),
+  name: z.string().min(1),
+  content: z.string(),
+});
+
 export const deployRequestSchema = z.object({
   instancePath: z.string().min(1),
   branch: z.string().min(1),

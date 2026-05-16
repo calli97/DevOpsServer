@@ -2,7 +2,7 @@ import { Router } from "express";
 import { NginxConfigService } from "../service/NginxConfigService";
 import { NginxConfigController } from "../controller/NginxConfigController";
 import { validate } from "../middleware/validate";
-import { createNginxConfigSchema, updateNginxConfigSchema } from "../schemas/nginx-config.schema";
+import { createNginxConfigSchema, updateNginxConfigSchema, forceSyncSchema } from "../schemas/nginx-config.schema";
 import { idParamSchema } from "../schemas/deploy.schema";
 
 const router = Router();
@@ -24,5 +24,7 @@ router.delete("/:id", validate(idParamSchema, "params"), async (req, res) => (aw
 router.post("/:id/run-commands", validate(idParamSchema, "params"), async (req, res) => (await getController()).runCommands(req, res));
 router.post("/test-config", async (req, res) => (await getController()).testConfig(req, res));
 router.post("/reload", async (req, res) => (await getController()).reload(req, res));
+router.get("/:id/sync-status", validate(idParamSchema, "params"), async (req, res) => (await getController()).syncStatus(req, res));
+router.post("/:id/force-sync", validate(idParamSchema, "params"), validate(forceSyncSchema), async (req, res) => (await getController()).forceSync(req, res));
 
 export default router;
