@@ -1,3 +1,4 @@
+import { createHmac } from "crypto";
 import SlaveServer from "../entity/SlaveServer";
 import { logger } from "./LogService";
 
@@ -55,10 +56,17 @@ export class SlaveServerClient {
     return `${slaveServer.host}${port}`;
   }
 
-  private getHeaders(slaveServer: SlaveServer): Record<string, string> {
+  private sign(secret: string, method: string, path: string, timestamp: string, body: string): string {
+    const payload = `${method}\n${path}\n${timestamp}\n${body}`;
+    return "sha256=" + createHmac("sha256", secret).update(payload).digest("hex");
+  }
+
+  private getHeaders(slaveServer: SlaveServer, method: string, path: string, body: string = ""): Record<string, string> {
+    const timestamp = String(Date.now());
     return {
       "Content-Type": "application/json",
-      "x-api-key": slaveServer.apiKey,
+      "x-timestamp": timestamp,
+      "x-signature": this.sign(slaveServer.apiKey, method, path, timestamp, body),
     };
   }
 
@@ -73,7 +81,7 @@ export class SlaveServerClient {
 
     try {
       const response = await fetch(url, {
-        headers: this.getHeaders(slaveServer),
+        headers: this.getHeaders(slaveServer, "GET", "/status"),
       });
       console.log("Response Log:", response);
       const data = (await response.json()) as { ok: boolean };
@@ -98,6 +106,7 @@ export class SlaveServerClient {
   ): Promise<SlaveCloneResponse> {
     const url = `${this.getBaseUrl(slaveServer)}/clone`;
     const body: SlaveCloneRequest = { cloneLine, path: instancePath };
+    const bodyStr = JSON.stringify(body);
 
     logger.info(
       `[SlaveServerClient] Sending clone request to ${slaveServer.nombre} (${url})`,
@@ -105,8 +114,8 @@ export class SlaveServerClient {
 
     const response = await fetch(url, {
       method: "POST",
-      headers: this.getHeaders(slaveServer),
-      body: JSON.stringify(body),
+      headers: this.getHeaders(slaveServer, "POST", "/clone", bodyStr),
+      body: bodyStr,
     });
 
     const data = (await response.json()) as SlaveCloneResponse;
@@ -130,6 +139,7 @@ export class SlaveServerClient {
     request: SlaveDeployRequest,
   ): Promise<SlaveDeployResponse> {
     const url = `${this.getBaseUrl(slaveServer)}/deploy`;
+    const bodyStr = JSON.stringify(request);
 
     logger.info(
       `[SlaveServerClient] Sending deploy request to ${slaveServer.nombre} (${url})`,
@@ -137,8 +147,8 @@ export class SlaveServerClient {
 
     const response = await fetch(url, {
       method: "POST",
-      headers: this.getHeaders(slaveServer),
-      body: JSON.stringify(request),
+      headers: this.getHeaders(slaveServer, "POST", "/deploy", bodyStr),
+      body: bodyStr,
     });
 
     const data = (await response.json()) as SlaveDeployResponse;
