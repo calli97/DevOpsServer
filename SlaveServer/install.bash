@@ -72,6 +72,14 @@ npm run build
 echo "🚀 Iniciando servidor con PM2..."
 pm2 start "node ./dist/index.js" --name slave-server
 
+echo "🔄 Configurando rotación de logs con pm2-logrotate..."
+pm2 install pm2-logrotate
+pm2 set pm2-logrotate:max_size 10M
+pm2 set pm2-logrotate:retain 14
+pm2 set pm2-logrotate:compress false
+pm2 set pm2-logrotate:dateFormat YYYY-MM-DD
+pm2 set pm2-logrotate:rotateInterval '0 0 */14 * *'
+
 echo "🔧 Configurando PM2 para arrancar con el sistema..."
 STARTUP_CMD=$(pm2 startup | grep "sudo env" | tr -d '\n')
 if [ -n "$STARTUP_CMD" ]; then
