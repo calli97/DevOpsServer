@@ -310,6 +310,56 @@ function slaveServersHandlers() {
     send('DELETE', '/slave-servers/:id', [['id','ss-d-id']], null, 'ss-delete-res');
 }
 
+// ════════════════════════════════════════════════════════════════
+// NGINX CONFIGS
+// ════════════════════════════════════════════════════════════════
+function nginxConfigsHandlers() {
+
+  document.getElementById('nc-byinstance-send').onclick = () =>
+    send('GET', '/nginx-configs/by-instance/:instanceId', [['instanceId','nc-byinstance-id']], null, 'nc-byinstance-res');
+
+  document.getElementById('nc-create-send').onclick = () =>
+    send('POST', '/nginx-configs', [], [
+      ['name',              'nc-c-name'],
+      ['projectInstanceId', 'nc-c-instanceId', 'number'],
+      ['path',              'nc-c-path'],
+      ['content',           'nc-c-content'],
+      ['command',           'nc-c-command'],
+    ], 'nc-create-res');
+
+  document.getElementById('nc-update-send').onclick = () =>
+    send('PUT', '/nginx-configs/:id', [['id','nc-u-id']], [
+      ['name',    'nc-u-name'],
+      ['path',    'nc-u-path'],
+      ['content', 'nc-u-content'],
+      ['command', 'nc-u-command'],
+    ], 'nc-update-res');
+
+  document.getElementById('nc-delete-send').onclick = () =>
+    send('DELETE', '/nginx-configs/:id', [['id','nc-d-id']], null, 'nc-delete-res');
+
+  document.getElementById('nc-run-send').onclick = () =>
+    send('POST', '/nginx-configs/:id/run-commands', [['id','nc-run-id']], null, 'nc-run-res');
+
+  document.getElementById('nc-test-send').onclick = async () => {
+    const { status, data, ms } = await apiRequest('POST', '/nginx-configs/test-config');
+    showResponse(document.getElementById('nc-test-res'), status, data, ms);
+  };
+
+  document.getElementById('nc-reload-send').onclick = async () => {
+    const { status, data, ms } = await apiRequest('POST', '/nginx-configs/reload');
+    showResponse(document.getElementById('nc-reload-res'), status, data, ms);
+  };
+
+  document.getElementById('nc-syncstatus-send').onclick = () =>
+    send('GET', '/nginx-configs/:id/sync-status', [['id','nc-syncstatus-id']], null, 'nc-syncstatus-res');
+
+  document.getElementById('nc-forcesync-send').onclick = () =>
+    send('POST', '/nginx-configs/:id/force-sync', [['id','nc-fs-id']], [
+      ['source', 'nc-fs-source'],
+    ], 'nc-forcesync-res');
+}
+
 // ── Boot ──────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   initTopBar();
@@ -320,5 +370,6 @@ document.addEventListener('DOMContentLoaded', () => {
   projectInstancesHandlers();
   deploysHandlers();
   configFilesHandlers();
+  nginxConfigsHandlers();
   slaveServersHandlers();
 });

@@ -37,6 +37,7 @@
     <button class="nav-btn" data-tab="project-instances">📦 Project Instances</button>
     <button class="nav-btn" data-tab="deploys">🚀 Deploys</button>
     <button class="nav-btn" data-tab="config-files">📄 Config Files</button>
+    <button class="nav-btn" data-tab="nginx-configs">🌐 Nginx Configs</button>
     <button class="nav-btn" data-tab="slave-servers">🖥 Slave Servers</button>
   </nav>
 
@@ -721,6 +722,237 @@
       </div>
 
     </div><!-- /tab-config-files -->
+
+
+    <!-- ════════════════════════════════════════
+         NGINX CONFIGS
+    ════════════════════════════════════════ -->
+    <div id="tab-nginx-configs" class="tab-content">
+      <div class="tab-title">Nginx Configs</div>
+
+      <!-- LIST BY INSTANCE -->
+      <div class="card open">
+        <div class="card-header">
+          <span class="method GET">GET</span>
+          <span class="card-path">/nginx-configs/by-instance/:instanceId</span>
+          <span class="card-label">List by instance</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <div class="fields single-col">
+            <div class="field"><label>Instance ID</label><input id="nc-byinstance-id" type="number" placeholder="1" /></div>
+          </div>
+          <button class="send-btn" id="nc-byinstance-send">Send</button>
+          <div class="response-wrap" id="nc-byinstance-res">
+            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- CREATE -->
+      <div class="card">
+        <div class="card-header">
+          <span class="method POST">POST</span>
+          <span class="card-path">/nginx-configs</span>
+          <span class="card-label">Create</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <div class="fields">
+            <div class="field">
+              <label>name</label>
+              <input id="nc-c-name" type="text" placeholder="myapp.conf" />
+            </div>
+            <div class="field">
+              <label>projectInstanceId</label>
+              <input id="nc-c-instanceId" type="number" placeholder="1" />
+            </div>
+            <div class="field full">
+              <label>path <span class="optional">directory on disk</span></label>
+              <input id="nc-c-path" type="text" placeholder="/etc/nginx/sites-available" />
+            </div>
+            <div class="field full">
+              <label>content</label>
+              <textarea id="nc-c-content" style="min-height:100px" placeholder="server { listen 80; ... }"></textarea>
+            </div>
+            <div class="field full">
+              <label>command <span class="optional">JSON string array</span></label>
+              <input id="nc-c-command" type="text" placeholder='["ln -s /etc/nginx/sites-available/myapp.conf /etc/nginx/sites-enabled/"]' />
+            </div>
+          </div>
+          <button class="send-btn" id="nc-create-send">Send</button>
+          <div class="response-wrap" id="nc-create-res">
+            <div class="response-header"><span class="status-badge ok">201</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- UPDATE -->
+      <div class="card">
+        <div class="card-header">
+          <span class="method PUT">PUT</span>
+          <span class="card-path">/nginx-configs/:id</span>
+          <span class="card-label">Update</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <div class="fields">
+            <div class="field">
+              <label>ID</label>
+              <input id="nc-u-id" type="number" placeholder="1" />
+            </div>
+            <div class="field">
+              <label>name <span class="optional">optional</span></label>
+              <input id="nc-u-name" type="text" />
+            </div>
+            <div class="field full">
+              <label>path <span class="optional">optional</span></label>
+              <input id="nc-u-path" type="text" />
+            </div>
+            <div class="field full">
+              <label>content <span class="optional">optional</span></label>
+              <textarea id="nc-u-content" style="min-height:80px"></textarea>
+            </div>
+            <div class="field full">
+              <label>command <span class="optional">optional — JSON string array</span></label>
+              <input id="nc-u-command" type="text" />
+            </div>
+          </div>
+          <button class="send-btn" id="nc-update-send">Send</button>
+          <div class="response-wrap" id="nc-update-res">
+            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- DELETE -->
+      <div class="card">
+        <div class="card-header">
+          <span class="method DELETE">DELETE</span>
+          <span class="card-path">/nginx-configs/:id</span>
+          <span class="card-label">Delete</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <div class="fields single-col">
+            <div class="field"><label>ID</label><input id="nc-d-id" type="number" placeholder="1" /></div>
+          </div>
+          <button class="send-btn" id="nc-delete-send">Send</button>
+          <div class="response-wrap" id="nc-delete-res">
+            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- RUN COMMANDS -->
+      <div class="card">
+        <div class="card-header">
+          <span class="method POST">POST</span>
+          <span class="card-path">/nginx-configs/:id/run-commands</span>
+          <span class="card-label">Run commands</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <div class="fields single-col">
+            <div class="field"><label>Config ID</label><input id="nc-run-id" type="number" placeholder="1" /></div>
+          </div>
+          <button class="send-btn" id="nc-run-send">Send</button>
+          <div class="response-wrap" id="nc-run-res">
+            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- TEST CONFIG -->
+      <div class="card">
+        <div class="card-header">
+          <span class="method POST">POST</span>
+          <span class="card-path">/nginx-configs/test-config</span>
+          <span class="card-label">Test config (nginx -t)</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <button class="send-btn" id="nc-test-send">Send</button>
+          <div class="response-wrap" id="nc-test-res">
+            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- RELOAD -->
+      <div class="card">
+        <div class="card-header">
+          <span class="method POST">POST</span>
+          <span class="card-path">/nginx-configs/reload</span>
+          <span class="card-label">Reload nginx</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <button class="send-btn" id="nc-reload-send">Send</button>
+          <div class="response-wrap" id="nc-reload-res">
+            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- SYNC STATUS -->
+      <div class="card">
+        <div class="card-header">
+          <span class="method GET">GET</span>
+          <span class="card-path">/nginx-configs/:id/sync-status</span>
+          <span class="card-label">Sync status</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <div class="fields single-col">
+            <div class="field"><label>Config ID</label><input id="nc-syncstatus-id" type="number" placeholder="1" /></div>
+          </div>
+          <button class="send-btn" id="nc-syncstatus-send">Send</button>
+          <div class="response-wrap" id="nc-syncstatus-res">
+            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- FORCE SYNC -->
+      <div class="card">
+        <div class="card-header">
+          <span class="method POST">POST</span>
+          <span class="card-path">/nginx-configs/:id/force-sync</span>
+          <span class="card-label">Force sync</span>
+          <span class="card-chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <div class="fields">
+            <div class="field">
+              <label>Config ID</label>
+              <input id="nc-fs-id" type="number" placeholder="1" />
+            </div>
+            <div class="field">
+              <label>source <span class="optional">stored = push DB→disk · current = pull disk→DB</span></label>
+              <select id="nc-fs-source">
+                <option value="stored">stored (push DB → disk)</option>
+                <option value="current">current (pull disk → DB)</option>
+              </select>
+            </div>
+          </div>
+          <button class="send-btn" id="nc-forcesync-send">Send</button>
+          <div class="response-wrap" id="nc-forcesync-res">
+            <div class="response-header"><span class="status-badge ok">200</span><span>Response</span><span class="response-time"></span></div>
+            <pre class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /tab-nginx-configs -->
 
 
     <!-- ════════════════════════════════════════
