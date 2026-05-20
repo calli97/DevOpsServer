@@ -43,6 +43,15 @@ else
   echo "✅ PM2 ya está instalado."
 fi
 
+# --- NGINX ---
+if ! command -v nginx &> /dev/null; then
+  echo "🟢 Instalando Nginx..."
+  sudo apt install -y nginx
+  sudo ufw allow 'Nginx Full'
+else
+  echo "✅ Nginx ya está instalado."
+fi
+
 # --- SOLICITAR DATOS DE CONFIGURACIÓN ---
 echo
 echo "⚙️  Configuración del SlaveServer:"

@@ -81,15 +81,13 @@ else
   echo "PM2 ya instalado."
 fi
 
-# --- NGINX (solo master) ---
-if [ "$SUBDIR" = "MasterServer" ]; then
-  if ! command -v nginx &> /dev/null; then
-    echo "Instalando Nginx..."
-    sudo apt install -y nginx
-    sudo ufw allow 'Nginx Full'
-  else
-    echo "Nginx ya instalado."
-  fi
+# --- NGINX ---
+if ! command -v nginx &> /dev/null; then
+  echo "Instalando Nginx..."
+  sudo apt install -y nginx
+  sudo ufw allow 'Nginx Full'
+else
+  echo "Nginx ya instalado."
 fi
 
 # --- CLONAR REPOSITORIO ---
