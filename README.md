@@ -37,7 +37,15 @@ SlaveServer(s)
 
 ## Installation
 
-Each component has its own `install.bash` script that sets up the environment (NVM, Node.js 22, PM2, Nginx) and starts the service. See the individual READMEs:
+Run the unified installer on any Ubuntu/Debian server — it downloads everything from GitHub automatically and lets you choose what to install:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/calli97/DevOpsServer/master/install.sh | bash
+```
+
+The script installs NVM, Node.js 22, PM2, and Nginx (Master only), prompts for configuration values, generates `src/config.ts`, compiles, and starts the service under PM2. If the target directory already exists it does a `git pull` instead of a fresh clone.
+
+For full configuration details and API reference, see the individual READMEs:
 
 - [MasterServer](./MasterServer/README.md)
 - [SlaveServer](./SlaveServer/README.md)

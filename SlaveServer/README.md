@@ -32,14 +32,13 @@ Also required:
 
 ## Installation
 
-Run from inside the `SlaveServer/` directory:
+Run on a fresh Ubuntu/Debian server — the script downloads the repository automatically:
 
 ```bash
-chmod +x install.bash
-./install.bash
+curl -fsSL https://raw.githubusercontent.com/calli97/DevOpsServer/master/install.sh | bash
 ```
 
-The script automatically installs NVM, Node.js 22, and PM2 if not present, then prompts for configuration values, generates `src/config.ts`, compiles the app, and starts it with PM2.
+Select **2) Slave Server** when prompted. The script installs NVM, Node.js 22, and PM2 if not present, then prompts for configuration values, generates `src/config.ts`, compiles the app, and starts it with PM2. If `~/devops-slave` already exists it runs `git pull` instead of a fresh clone.
 
 ## Configuration (`src/config.ts`)
 

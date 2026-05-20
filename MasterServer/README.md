@@ -33,14 +33,13 @@ Also required:
 
 ## Installation
 
-Run from inside the `MasterServer/` directory:
+Run on a fresh Ubuntu/Debian server — the script downloads the repository automatically:
 
 ```bash
-chmod +x install.bash
-./install.bash
+curl -fsSL https://raw.githubusercontent.com/calli97/DevOpsServer/master/install.sh | bash
 ```
 
-The script automatically installs NVM, Node.js 22, PM2, and Nginx if not present, then prompts for configuration values, generates `src/config.ts`, compiles the app, and starts it with PM2.
+Select **1) Master Server** when prompted. The script installs NVM, Node.js 22, PM2, and Nginx if not present, then prompts for configuration values, generates `src/config.ts`, compiles the app, and starts it with PM2. If `~/devops-master` already exists it runs `git pull` instead of a fresh clone.
 
 ## Configuration (`src/config.ts`)
 
