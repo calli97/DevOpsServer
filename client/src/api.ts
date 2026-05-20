@@ -55,11 +55,13 @@ export const api = {
   },
 
   nginxConfigs: {
-    listByInstance: (instanceId: number)      => request('GET',    `/nginx-configs/by-instance/${instanceId}`),
-    create:         (data: unknown)           => request('POST',   '/nginx-configs', data),
-    update:         (id: number, data: unknown) => request('PUT',  `/nginx-configs/${id}`, data),
-    runCommands:    (id: number)              => request('POST',   `/nginx-configs/${id}/run-commands`),
-    testConfig:     ()                        => request('POST',   '/nginx-configs/test-config'),
-    reload:         ()                        => request('POST',   '/nginx-configs/reload'),
+    listByInstance: (instanceId: number)                        => request('GET',    `/nginx-configs/by-instance/${instanceId}`),
+    create:         (data: unknown)                             => request('POST',   '/nginx-configs', data),
+    update:         (id: number, data: unknown)                 => request('PUT',    `/nginx-configs/${id}`, data),
+    runCommands:    (id: number)                                => request('POST',   `/nginx-configs/${id}/run-commands`),
+    testConfig:     ()                                          => request('POST',   '/nginx-configs/test-config'),
+    reload:         ()                                          => request('POST',   '/nginx-configs/reload'),
+    syncStatus:     (id: number)                                => request<{ ok: boolean; inSync: boolean; error?: string }>('GET', `/nginx-configs/${id}/sync-status`),
+    forceSync:      (id: number, source: 'stored' | 'current') => request('POST',   `/nginx-configs/${id}/force-sync`, { source }),
   },
 }

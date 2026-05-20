@@ -106,6 +106,7 @@ export default function InstanceDetail() {
   const [editNginxForm, setEditNginxForm]             = useState({ name: '', path: '', content: '', commandsText: '' })
   const [editNginxError, setEditNginxError]           = useState('')
   const [editNginxSaving, setEditNginxSaving]         = useState(false)
+  const [nginxSyncStatus, setNginxSyncStatus]         = useState<Record<number, { inSync: boolean } | null>>({})
 
   useEffect(() => { loadInstance(); loadNginxConfigs() }, [id])
 
@@ -363,7 +364,38 @@ export default function InstanceDetail() {
 
   async function loadNginxConfigs() {
     const res = await api.nginxConfigs.listByInstance(Number(id)) as { ok: boolean; data: NginxConfig[] }
-    if (res.ok) setNginxConfigs(res.data)
+    if (res.ok) {
+      setNginxConfigs(res.data)
+      res.data.forEach(nc => checkNginxSyncStatus(nc.id))
+    }
+  }
+
+  async function checkNginxSyncStatus(configId: number) {
+    setNginxActionLoading(prev => ({ ...prev, [`sync-check-${configId}`]: true }))
+    try {
+      const res = await api.nginxConfigs.syncStatus(configId)
+      setNginxSyncStatus(prev => ({ ...prev, [configId]: res.ok ? { inSync: res.inSync } : null }))
+    } finally {
+      setNginxActionLoading(prev => ({ ...prev, [`sync-check-${configId}`]: false }))
+    }
+  }
+
+  async function forceSyncNginx(configId: number, source: 'stored' | 'current') {
+    setNginxActionLoading(prev => ({ ...prev, [`sync-${source}-${configId}`]: true }))
+    setNginxActionMsg('')
+    try {
+      const res = await api.nginxConfigs.forceSync(configId, source) as { ok: boolean; error?: string }
+      setNginxActionOk(res.ok)
+      setNginxActionMsg(res.ok
+        ? (source === 'stored' ? 'Config pushed to disk.' : 'Config pulled from disk.')
+        : (res.error || 'Sync failed.'))
+      if (res.ok) {
+        checkNginxSyncStatus(configId)
+        loadNginxConfigs()
+      }
+    } finally {
+      setNginxActionLoading(prev => ({ ...prev, [`sync-${source}-${configId}`]: false }))
+    }
   }
 
   async function createNginxConfig(e: React.FormEvent) {
@@ -851,6 +883,28 @@ export default function InstanceDetail() {
                       <span className={`badge ${nc.created ? 'badge-green' : 'badge-gray'}`}>
                         {nc.created ? 'created' : 'not created'}
                       </span>
+                      {nginxActionLoading[`sync-check-${nc.id}`]
+                        ? <span className="badge badge-gray">checking…</span>
+                        : nginxSyncStatus[nc.id] === undefined
+                          ? null
+                          : nginxSyncStatus[nc.id] === null
+                            ? <span className="badge badge-gray">sync?</span>
+                            : <span className={`badge ${nginxSyncStatus[nc.id]!.inSync ? 'badge-green' : 'badge-yellow'}`}>
+                                {nginxSyncStatus[nc.id]!.inSync ? 'in sync' : 'out of sync'}
+                              </span>
+                      }
+                      <button className="btn btn-ghost btn-sm"
+                        title="Push DB content to disk"
+                        onClick={() => forceSyncNginx(nc.id, 'stored')}
+                        disabled={nginxActionLoading[`sync-stored-${nc.id}`]}>
+                        {nginxActionLoading[`sync-stored-${nc.id}`] ? '…' : '↑ Push'}
+                      </button>
+                      <button className="btn btn-ghost btn-sm"
+                        title="Pull disk content to DB"
+                        onClick={() => forceSyncNginx(nc.id, 'current')}
+                        disabled={nginxActionLoading[`sync-current-${nc.id}`]}>
+                        {nginxActionLoading[`sync-current-${nc.id}`] ? '…' : '↓ Pull'}
+                      </button>
                       <button className="btn btn-primary btn-sm"
                         onClick={() => runNginxCommands(nc.id)}
                         disabled={nginxActionLoading[`run-${nc.id}`]}>
