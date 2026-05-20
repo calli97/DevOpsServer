@@ -7,6 +7,7 @@ import cors from "cors";
 import { logMiddleware } from "./middleware/logMiddleware";
 import { apiKeyMiddleware } from "./middleware/apiKeyMiddleware";
 import { logger } from "./service/LogService";
+import { dataSource } from "./dbConnection";
 
 const app = express();
 
@@ -33,6 +34,11 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use("/", routes);
 
-app.listen(config.port, () => {
-  logger.success(`Server running on port ${config.port}`);
+dataSource.initialize().then(() => {
+  app.listen(config.port, () => {
+    logger.success(`Server running on port ${config.port}`);
+  });
+}).catch((err) => {
+  logger.error(`Database connection failed: ${err.message}`);
+  process.exit(1);
 });
