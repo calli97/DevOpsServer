@@ -2,10 +2,13 @@ import { promisify } from "util";
 import { exec } from "child_process";
 import { Repository } from "typeorm";
 import Deploy from "../entity/Deploy";
+import NginxConfig from "../entity/NginxConfig";
 import PM2Service from "./PM2Service";
 import { GitHubService } from "./GitHubService";
 import { ConfigFileService } from "./ConfigFileService";
+import { SlaveServerClient } from "./SlaveServerClient";
 import { logger } from "./LogService";
+import { getRepository } from "../dbConnection";
 import path from "path";
 
 const execAsync = promisify(exec);
@@ -16,6 +19,7 @@ export class DeployService {
     private readonly pm2Service: PM2Service,
     private readonly githubService: GitHubService,
     private readonly configFileService: ConfigFileService,
+    private readonly slaveServerClient: SlaveServerClient,
   ) {}
 
   async findAll(): Promise<Deploy[]> {
@@ -169,11 +173,55 @@ export class DeployService {
   async startOrRestart(id: number): Promise<Deploy> {
     const deploy = await this.deployRepository.findOne({
       where: { id },
-      relations: { projectInstance: { project: true } },
+      relations: {
+        projectInstance: {
+          project: true,
+          slaveServer: true,
+          configFiles: true,
+        },
+      },
     });
 
     if (!deploy) {
       return null;
+    }
+
+    if (deploy.projectInstance.slaveServer) {
+      const nginxConfigRepository = await getRepository(NginxConfig);
+      const nginxConfigs = await nginxConfigRepository.find({
+        where: { projectInstance: { id: deploy.projectInstance.id } },
+      });
+
+      const response = await this.slaveServerClient.deploy(deploy.projectInstance.slaveServer, {
+        instancePath: deploy.projectInstance.path,
+        branch: deploy.projectInstance.branch,
+        cloneLine: deploy.projectInstance.project.cloneLine,
+        deploys: [{
+          name: deploy.name,
+          startPath: deploy.startPath,
+          buildCommands: deploy.buildCommands ?? null,
+          startCommands: deploy.startCommands,
+          started: deploy.started,
+          isStaticSite: deploy.isStaticSite,
+        }],
+        configFiles: (deploy.projectInstance.configFiles ?? []).map((cf) => ({
+          name: cf.name,
+          relativePath: cf.relativePath,
+          content: cf.content,
+        })),
+        nginxConfigs: nginxConfigs.map((nc) => ({
+          name: nc.name,
+          path: nc.path,
+          content: nc.content,
+          command: nc.command,
+        })),
+      });
+
+      const deployError = response.errors.find((e) => e.deployName === deploy.name);
+      if (deployError) throw new Error(deployError.error);
+
+      deploy.started = true;
+      return this.deployRepository.save(deploy);
     }
 
     const instanceDir = this.getInstanceDir(deploy);
