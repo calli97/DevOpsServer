@@ -121,3 +121,11 @@ export const stopRequestSchema = z.object({
   deployName: z.string().min(1),
   startPath: z.string(),
 });
+
+export interface NginxRunCommandsRequest { command: string; }
+export interface NginxRunCommandsResponse { ok: boolean; stdout?: string; stderr?: string; error?: string; }
+export const nginxRunCommandsBodySchema = z.object({ command: z.string().min(1) });
+
+export interface NginxDeleteFileRequest { path: string; name: string; }
+export interface NginxDeleteFileResponse { ok: boolean; error?: string; }
+export const nginxDeleteFileBodySchema = z.object({ path: z.string().min(1), name: z.string().min(1) });

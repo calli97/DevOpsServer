@@ -57,6 +57,23 @@ export class NginxConfigService {
     logger.info(`[NginxConfigService] Written: ${fullPath}`);
   }
 
+  async runCommands(command: string): Promise<{ stdout: string; stderr: string }> {
+    const cmds: string[] = JSON.parse(command);
+    if (!Array.isArray(cmds) || cmds.length === 0) {
+      throw new Error("command must be a non-empty JSON array");
+    }
+    const { stdout, stderr } = await execAsync(cmds.join(" && "));
+    logger.info("[NginxConfigService] runCommands:", stdout);
+    if (stderr) logger.warning("[NginxConfigService] stderr:", stderr);
+    return { stdout, stderr };
+  }
+
+  async deleteFile(filePath: string, name: string): Promise<void> {
+    const fullPath = path.join(filePath, name);
+    await fs.unlink(fullPath);
+    logger.info(`[NginxConfigService] Deleted: ${fullPath}`);
+  }
+
   async reload(): Promise<{ ok: boolean; stdout: string; stderr: string }> {
     try {
       const { stdout, stderr } = await execAsync("sudo systemctl reload nginx");

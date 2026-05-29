@@ -20,7 +20,7 @@ async function getController() {
     const githubService = new GitHubService();
     const configFileService = new ConfigFileService();
     const slaveServerClient = new SlaveServerClient();
-    const deployService = new DeployService(deployRepository, pm2Service, githubService, configFileService);
+    const deployService = new DeployService(deployRepository, pm2Service, githubService, configFileService, slaveServerClient);
     const projectInstanceService = new ProjectInstanceService(deployService, configFileService, githubService, slaveServerClient);
     controller = new GitHubWebhookController(projectInstanceService);
   }

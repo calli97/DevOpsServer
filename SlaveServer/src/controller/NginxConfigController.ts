@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { NginxConfigService } from "../service/NginxConfigService";
+import { NginxRunCommandsRequest, NginxDeleteFileRequest } from "../dto/slave.dto";
 import { logger } from "../service/LogService";
 
 export class NginxConfigController {
@@ -23,6 +24,28 @@ export class NginxConfigController {
       res.status(200).json({ ok: true });
     } catch (error) {
       logger.error("[NginxConfigController] Error writing file:", error);
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  };
+
+  runCommands = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { command } = req.body as NginxRunCommandsRequest;
+      const result = await this.nginxConfigService.runCommands(command);
+      res.status(200).json({ ok: true, ...result });
+    } catch (error) {
+      logger.error("[NginxConfigController] Error running commands:", error);
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  };
+
+  deleteFile = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { path: filePath, name } = req.body as NginxDeleteFileRequest;
+      await this.nginxConfigService.deleteFile(filePath, name);
+      res.status(200).json({ ok: true });
+    } catch (error) {
+      logger.error("[NginxConfigController] Error deleting file:", error);
       res.status(500).json({ ok: false, error: error.message });
     }
   };

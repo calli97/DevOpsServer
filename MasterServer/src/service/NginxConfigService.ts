@@ -38,16 +38,25 @@ export class NginxConfigService {
     const nginxConfig = repository.create(data);
     await repository.save(nginxConfig);
 
-    try {
-      await fs.access(nginxConfig.path);
-    } catch {
-      throw new Error(`Path does not exist: ${nginxConfig.path}`);
-    }
+    const full = await this.findByIdWithRelations(nginxConfig.id);
+    const slave = full?.projectInstance?.slaveServer ?? null;
 
-    try {
-      await this.writeFile(nginxConfig);
-    } catch (error) {
-      throw new Error(`Failed to create config file: ${error.message}`);
+    if (slave) {
+      const result = await this.slaveClient.writeNginxConfig(
+        slave, nginxConfig.path, nginxConfig.name, nginxConfig.content,
+      );
+      if (!result.ok) throw new Error(result.error ?? "Failed to write nginx config on slave");
+    } else {
+      try {
+        await fs.access(nginxConfig.path);
+      } catch {
+        throw new Error(`Path does not exist: ${nginxConfig.path}`);
+      }
+      try {
+        await this.writeFile(nginxConfig);
+      } catch (error) {
+        throw new Error(`Failed to create config file: ${error.message}`);
+      }
     }
 
     nginxConfig.created = true;
@@ -55,12 +64,13 @@ export class NginxConfigService {
   }
 
   async update(id: number, data: Partial<NginxConfig>): Promise<NginxConfig> {
-    const repository = await getRepository(NginxConfig);
-    const nginxConfig = await repository.findOne({ where: { id } });
+    const nginxConfig = await this.findByIdWithRelations(id);
 
     if (!nginxConfig) {
       throw new NotFoundError("NginxConfig", id);
     }
+
+    const slave = nginxConfig.projectInstance?.slaveServer ?? null;
 
     const pathChanged = data.path !== undefined && data.path !== nginxConfig.path;
     const nameChanged = data.name !== undefined && data.name !== nginxConfig.name;
@@ -68,29 +78,44 @@ export class NginxConfigService {
     const fileNeedsUpdate = pathChanged || nameChanged || contentChanged;
 
     if (fileNeedsUpdate) {
-      const newPath = data.path ?? nginxConfig.path;
+      if (slave) {
+        const oldPath = nginxConfig.path;
+        const oldName = nginxConfig.name;
+        Object.assign(nginxConfig, data);
 
-      try {
-        await fs.access(newPath);
-      } catch {
-        throw new Error(`Path does not exist: ${newPath}`);
-      }
-
-      if (pathChanged || nameChanged) {
-        const oldFilePath = path.join(nginxConfig.path, nginxConfig.name);
-        try {
-          await fs.unlink(oldFilePath);
-        } catch (error) {
-          throw new Error(`Failed to delete original config file: ${error.message}`);
+        if (pathChanged || nameChanged) {
+          await this.slaveClient.deleteNginxFile(slave, oldPath, oldName);
         }
-      }
 
-      Object.assign(nginxConfig, data);
+        const result = await this.slaveClient.writeNginxConfig(
+          slave, nginxConfig.path, nginxConfig.name, nginxConfig.content,
+        );
+        if (!result.ok) throw new Error(result.error ?? "Failed to write nginx config on slave");
+      } else {
+        const newPath = data.path ?? nginxConfig.path;
 
-      try {
-        await this.writeFile(nginxConfig);
-      } catch (error) {
-        throw new Error(`Failed to write config file: ${error.message}`);
+        try {
+          await fs.access(newPath);
+        } catch {
+          throw new Error(`Path does not exist: ${newPath}`);
+        }
+
+        if (pathChanged || nameChanged) {
+          const oldFilePath = path.join(nginxConfig.path, nginxConfig.name);
+          try {
+            await fs.unlink(oldFilePath);
+          } catch (error) {
+            throw new Error(`Failed to delete original config file: ${error.message}`);
+          }
+        }
+
+        Object.assign(nginxConfig, data);
+
+        try {
+          await this.writeFile(nginxConfig);
+        } catch (error) {
+          throw new Error(`Failed to write config file: ${error.message}`);
+        }
       }
 
       if (!nginxConfig.created) {
@@ -100,6 +125,7 @@ export class NginxConfigService {
       Object.assign(nginxConfig, data);
     }
 
+    const repository = await getRepository(NginxConfig);
     return repository.save(nginxConfig);
   }
 
@@ -116,6 +142,15 @@ export class NginxConfigService {
   }
 
   async runCommands(nginxConfig: NginxConfig): Promise<{ stdout: string; stderr: string }> {
+    const full = await this.findByIdWithRelations(nginxConfig.id);
+    const slave = full?.projectInstance?.slaveServer ?? null;
+
+    if (slave) {
+      const result = await this.slaveClient.runNginxCommands(slave, nginxConfig.command);
+      if (!result.ok) throw new Error(result.error ?? "Failed to run commands on slave");
+      return { stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
+    }
+
     const cmds: string[] = JSON.parse(nginxConfig.command);
     if (!Array.isArray(cmds) || cmds.length === 0) {
       throw new Error("command must be a non-empty JSON array of strings");

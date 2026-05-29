@@ -2,7 +2,7 @@ import { Router } from "express";
 import { NginxConfigController } from "../controller/NginxConfigController";
 import { NginxConfigService } from "../service/NginxConfigService";
 import { validate } from "../middleware/validate";
-import { nginxReadQuerySchema, nginxWriteBodySchema } from "../dto/slave.dto";
+import { nginxReadQuerySchema, nginxWriteBodySchema, nginxRunCommandsBodySchema, nginxDeleteFileBodySchema } from "../dto/slave.dto";
 
 const router = Router();
 
@@ -14,5 +14,7 @@ function getController() {
 
 router.get("/read", validate(nginxReadQuerySchema, "query"), (req, res) => getController().readFile(req, res));
 router.post("/write", validate(nginxWriteBodySchema), (req, res) => getController().writeFile(req, res));
+router.post("/run-commands", validate(nginxRunCommandsBodySchema), (req, res) => getController().runCommands(req, res));
+router.delete("/file", validate(nginxDeleteFileBodySchema), (req, res) => getController().deleteFile(req, res));
 
 export default router;
