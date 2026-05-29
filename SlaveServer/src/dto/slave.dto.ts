@@ -102,3 +102,22 @@ export const deployRequestSchema = z.object({
   configFiles: z.array(configFileDtoSchema),
   nginxConfigs: z.array(nginxConfigDtoSchema),
 });
+
+export interface StopRequest {
+  instancePath: string;
+  cloneLine: string;
+  deployName: string;
+  startPath: string;
+}
+
+export interface StopResponse {
+  ok: boolean;
+  error?: string;
+}
+
+export const stopRequestSchema = z.object({
+  instancePath: z.string().min(1),
+  cloneLine: z.string().min(1),
+  deployName: z.string().min(1),
+  startPath: z.string(),
+});

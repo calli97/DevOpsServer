@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import path from "path";
-import { DeployRequest, DeployResponse, DeployErrorDto, DeployDto } from "../dto/slave.dto";
+import { DeployRequest, DeployResponse, DeployErrorDto, DeployDto, StopRequest, StopResponse } from "../dto/slave.dto";
 import { GitService } from "../service/GitService";
 import { ConfigFileService } from "../service/ConfigFileService";
 import { NginxConfigService } from "../service/NginxConfigService";
@@ -94,5 +94,31 @@ export class DeployController {
     };
 
     res.status(200).json(response);
+  };
+
+  stopDeploy = async (req: Request, res: Response): Promise<void> => {
+    const { instancePath, cloneLine, deployName, startPath } = req.body as StopRequest;
+    const repoDir = this.gitService.getProjectDirectoryName(cloneLine);
+    const instanceDir = path.join(instancePath, repoDir);
+
+    try {
+      await this.deployService.stop(instanceDir, {
+        name: deployName,
+        startPath,
+        buildCommands: null,
+        startCommands: "",
+        started: true,
+        isStaticSite: false,
+      });
+      const response: StopResponse = { ok: true };
+      res.status(200).json(response);
+    } catch (error) {
+      logger.error("[DeployController] stop failed:", error);
+      const response: StopResponse = {
+        ok: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+      res.status(500).json(response);
+    }
   };
 }

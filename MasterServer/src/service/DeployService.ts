@@ -244,11 +244,26 @@ export class DeployService {
   async stopById(id: number): Promise<Deploy | null> {
     const deploy = await this.deployRepository.findOne({
       where: { id },
-      relations: { projectInstance: { project: true } },
+      relations: {
+        projectInstance: {
+          project: true,
+          slaveServer: true,
+        },
+      },
     });
 
     if (!deploy) {
       return null;
+    }
+
+    if (deploy.projectInstance.slaveServer) {
+      await this.slaveServerClient.stop(deploy.projectInstance.slaveServer, {
+        instancePath: deploy.projectInstance.path,
+        cloneLine: deploy.projectInstance.project.cloneLine,
+        deployName: deploy.name,
+        startPath: deploy.startPath,
+      });
+      return deploy;
     }
 
     const instanceDir = this.getInstanceDir(deploy);

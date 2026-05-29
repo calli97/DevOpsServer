@@ -61,6 +61,18 @@ export interface SlaveNginxWriteResponse {
   error?: string;
 }
 
+export interface SlaveStopRequest {
+  instancePath: string;
+  cloneLine: string;
+  deployName: string;
+  startPath: string;
+}
+
+export interface SlaveStopResponse {
+  ok: boolean;
+  error?: string;
+}
+
 export class SlaveServerClient {
   private getBaseUrl(slaveServer: SlaveServer): string {
     const port = slaveServer.puerto ? `:${slaveServer.puerto}` : "";
@@ -218,6 +230,40 @@ export class SlaveServerClient {
     } else {
       logger.success(
         `[SlaveServerClient] Deploy succeeded on ${slaveServer.nombre}`,
+      );
+    }
+
+    return data;
+  }
+
+  async stop(
+    slaveServer: SlaveServer,
+    request: SlaveStopRequest,
+  ): Promise<SlaveStopResponse> {
+    const routePath = "/deploy/stop";
+    const bodyStr = JSON.stringify(request);
+    const url = `${this.getBaseUrl(slaveServer)}${routePath}`;
+
+    logger.info(
+      `[SlaveServerClient] Sending stop request to ${slaveServer.nombre} (${url})`,
+    );
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: this.getHeaders(slaveServer, "POST", routePath, bodyStr),
+      body: bodyStr,
+    });
+
+    const data = (await response.json()) as SlaveStopResponse;
+
+    if (!response.ok) {
+      logger.error(
+        `[SlaveServerClient] Stop request failed (${response.status}):`,
+        data,
+      );
+    } else {
+      logger.success(
+        `[SlaveServerClient] Stop succeeded on ${slaveServer.nombre}`,
       );
     }
 
