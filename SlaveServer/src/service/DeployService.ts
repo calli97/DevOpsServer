@@ -38,14 +38,11 @@ export class DeployService {
     deploy: DeployDto,
   ): Promise<{ stdout: string; stderr: string }> {
     const buildResponse = await this.runBuildCommands(projectPath, deploy);
-    if (buildResponse.stderr && buildResponse.stderr !== "") {
-      return buildResponse;
-    }
 
     logger.success(`[DeployService] Build completed for deploy ${deploy.name}`);
 
     if (deploy.isStaticSite) {
-      return buildResponse;
+      return { stdout: buildResponse.stdout, stderr: "" };
     }
 
     return await this.pm2Service.start(
@@ -60,12 +57,9 @@ export class DeployService {
     deploy: DeployDto,
   ): Promise<{ stdout: string; stderr: string }> {
     const buildResponse = await this.runBuildCommands(projectPath, deploy);
-    if (buildResponse.stderr && buildResponse.stderr !== "") {
-      return buildResponse;
-    }
 
     if (deploy.isStaticSite) {
-      return buildResponse;
+      return { stdout: buildResponse.stdout, stderr: "" };
     }
 
     return await this.pm2Service.restart(

@@ -103,15 +103,12 @@ export class DeployService {
       await this.gitPull(projectPath, projectInstance.branch);
       await this.configFileService.writeFilesForInstance(projectInstance, projectPath);
     }
-    let buildResponse = await this.runBuildCommands(projectPath, deploy);
-    if (buildResponse.stderr && buildResponse.stderr != "") {
-      return buildResponse;
-    }
+    const buildResponse = await this.runBuildCommands(projectPath, deploy);
     logger.success(
       `[DeployService] Build completed for deploy ${deploy.name} [ID: ${deploy.id}]`,
     );
     if (deploy.isStaticSite) {
-      return buildResponse;
+      return { stdout: buildResponse.stdout, stderr: "" };
     }
     return await this.pm2Service.start(
       deploy.name,
@@ -129,12 +126,9 @@ export class DeployService {
       await this.gitPull(projectPath, projectInstance.branch);
       await this.configFileService.writeFilesForInstance(projectInstance, projectPath);
     }
-    let buildResponse = await this.runBuildCommands(projectPath, deploy);
-    if (buildResponse.stderr && buildResponse.stderr != "") {
-      return buildResponse;
-    }
+    const buildResponse = await this.runBuildCommands(projectPath, deploy);
     if (deploy.isStaticSite) {
-      return buildResponse;
+      return { stdout: buildResponse.stdout, stderr: "" };
     }
     return await this.pm2Service.restart(
       deploy.name,
