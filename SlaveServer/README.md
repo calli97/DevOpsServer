@@ -146,8 +146,48 @@ Response:
 ```json
 {
   "ok": true,
-  "errors": []
+  "errors": [],
+  "results": [
+    {
+      "name": "my-app",
+      "build": { "stdout": "...", "stderr": "" },
+      "start": { "stdout": "...", "stderr": "" }
+    }
+  ]
 }
 ```
 
+- `errors` — array of `{ deployName, error }` for any deploy that failed; empty on full success
+- `results` — per-deploy output for each phase (`build`, `start`, or `restart`); each phase contains `stdout` and `stderr`
+
 If any deploy fails, `ok` will be `false` and `errors` will contain the deploy name and the error message.
+
+### Stop deploy (`/deploy/stop`)
+| Method | Path | Description |
+|---|---|---|
+| POST | `/deploy/stop` | Stop a running PM2 process for a deploy |
+
+Body:
+```json
+{
+  "instancePath": "/home/deploy/apps",
+  "cloneLine": "git@github.com:user/repo.git",
+  "deployName": "my-app",
+  "startPath": ""
+}
+```
+
+- `instancePath` — root directory of the instance on this server
+- `cloneLine` — SSH clone line, used to resolve the repo directory inside `instancePath`
+- `deployName` — PM2 process name to stop
+- `startPath` — subdirectory inside the repo where the app lives (empty string for the root)
+
+Response:
+```json
+{
+  "ok": true,
+  "result": { "stdout": "...", "stderr": "" }
+}
+```
+
+On failure, `ok` will be `false` and `error` will contain the reason.

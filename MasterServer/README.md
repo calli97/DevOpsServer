@@ -94,6 +94,7 @@ A **Project** represents a GitHub repository. Main fields:
 | POST | `/project-instances` | Create instance |
 | PUT | `/project-instances/:id` | Update instance |
 | DELETE | `/project-instances/:id` | Delete instance |
+| POST | `/project-instances/:id/start` | Start or restart all deploys of an instance |
 
 A **ProjectInstance** is a concrete deployment of a project. Fields:
 - `name` — instance name
@@ -102,6 +103,24 @@ A **ProjectInstance** is a concrete deployment of a project. Fields:
 - `autoUpdate` — if `true`, redeploys automatically on webhook push to the tracked branch
 - `afterDeployCommands` — commands to run after a deploy
 - `slaveServer` — assigned SlaveServer (if null, runs on the MasterServer itself)
+
+**`POST /project-instances/:id/start`** triggers a full deploy cycle (git pull → inject config files → write Nginx configs → build → start/restart PM2 processes) for every Deploy associated with the instance. No request body required.
+
+```json
+{
+  "ok": true,
+  "message": "Deploys started successfully",
+  "results": [
+    {
+      "name": "my-app",
+      "build": { "stdout": "...", "stderr": "" },
+      "start": { "stdout": "...", "stderr": "" }
+    }
+  ]
+}
+```
+
+On partial failure `ok` is `false` and a `failures` array lists each deploy that errored and the reason.
 
 ### Deploys (`/deploys`)
 | Method | Path | Description |
