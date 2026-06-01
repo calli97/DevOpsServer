@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import path from "path";
-import { DeployRequest, DeployResponse, DeployErrorDto, DeployDto, StopRequest, StopResponse } from "../dto/slave.dto";
+import { DeployRequest, DeployResponse, DeployErrorDto, DeployResultDto, DeployDto, StopRequest, StopResponse } from "../dto/slave.dto";
 import { GitService } from "../service/GitService";
 import { ConfigFileService } from "../service/ConfigFileService";
 import { NginxConfigService } from "../service/NginxConfigService";
@@ -29,6 +29,7 @@ export class DeployController {
       const response: DeployResponse = {
         ok: false,
         errors: [{ deployName: "__git_pull__", error: error instanceof Error ? error.message : String(error) }],
+        results: [],
       };
       res.status(500).json(response);
       return;
@@ -41,6 +42,7 @@ export class DeployController {
       const response: DeployResponse = {
         ok: false,
         errors: [{ deployName: "__config_files__", error: error instanceof Error ? error.message : String(error) }],
+        results: [],
       };
       res.status(500).json(response);
       return;
@@ -48,6 +50,7 @@ export class DeployController {
 
     const succeeded: DeployDto[] = [];
     const errors: DeployErrorDto[] = [];
+    const results: DeployResultDto[] = [];
 
     for (const deploy of deploys) {
       try {
@@ -55,8 +58,11 @@ export class DeployController {
           ? await this.deployService.restart(instanceDir, deploy)
           : await this.deployService.start(instanceDir, deploy);
 
-        if (result.stderr) {
-          errors.push({ deployName: deploy.name, error: result.stderr });
+        results.push({ name: deploy.name, ...result });
+
+        const actionStderr = result.start?.stderr ?? result.restart?.stderr ?? "";
+        if (actionStderr) {
+          errors.push({ deployName: deploy.name, error: actionStderr });
         } else {
           succeeded.push(deploy);
         }
@@ -91,6 +97,7 @@ export class DeployController {
     const response: DeployResponse = {
       ok: errors.length === 0,
       errors,
+      results,
     };
 
     res.status(200).json(response);
@@ -102,7 +109,7 @@ export class DeployController {
     const instanceDir = path.join(instancePath, repoDir);
 
     try {
-      await this.deployService.stop(instanceDir, {
+      const { stop } = await this.deployService.stop(instanceDir, {
         name: deployName,
         startPath,
         buildCommands: null,
@@ -110,7 +117,7 @@ export class DeployController {
         started: true,
         isStaticSite: false,
       });
-      const response: StopResponse = { ok: true };
+      const response: StopResponse = { ok: true, result: stop };
       res.status(200).json(response);
     } catch (error) {
       logger.error("[DeployController] stop failed:", error);

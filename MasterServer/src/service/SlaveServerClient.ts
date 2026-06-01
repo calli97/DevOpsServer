@@ -45,9 +45,22 @@ export interface SlaveDeployRequest {
   nginxConfigs: SlaveNginxConfigDto[];
 }
 
+export interface SlaveDeployLogDto {
+  stdout: string;
+  stderr: string;
+}
+
+export interface SlaveDeployResultDto {
+  name: string;
+  build?: SlaveDeployLogDto;
+  start?: SlaveDeployLogDto;
+  restart?: SlaveDeployLogDto;
+}
+
 export interface SlaveDeployResponse {
   ok: boolean;
   errors: { deployName: string; error: string }[];
+  results: SlaveDeployResultDto[];
 }
 
 export interface SlaveNginxReadResponse {
@@ -71,6 +84,7 @@ export interface SlaveStopRequest {
 export interface SlaveStopResponse {
   ok: boolean;
   error?: string;
+  result?: SlaveDeployLogDto;
 }
 
 export interface SlaveNginxRunCommandsResponse {

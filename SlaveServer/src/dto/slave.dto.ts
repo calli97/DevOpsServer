@@ -49,9 +49,28 @@ export interface DeployErrorDto {
   error: string;
 }
 
+export interface DeployLogDto {
+  stdout: string;
+  stderr: string;
+}
+
+export interface DeployOpResultDto {
+  build?: DeployLogDto;
+  start?: DeployLogDto;
+  restart?: DeployLogDto;
+}
+
+export interface DeployResultDto {
+  name: string;
+  build?: DeployLogDto;
+  start?: DeployLogDto;
+  restart?: DeployLogDto;
+}
+
 export interface DeployResponse {
   ok: boolean;
   errors: DeployErrorDto[];
+  results: DeployResultDto[];
 }
 
 // --- Zod schemas ---
@@ -113,6 +132,7 @@ export interface StopRequest {
 export interface StopResponse {
   ok: boolean;
   error?: string;
+  result?: DeployLogDto;
 }
 
 export const stopRequestSchema = z.object({

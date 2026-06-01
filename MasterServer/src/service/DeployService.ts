@@ -13,6 +13,18 @@ import path from "path";
 
 const execAsync = promisify(exec);
 
+export interface DeployLog {
+  stdout: string;
+  stderr: string;
+}
+
+export interface DeployResult {
+  build?: DeployLog;
+  start?: DeployLog;
+  restart?: DeployLog;
+  stop?: DeployLog;
+}
+
 export class DeployService {
   constructor(
     private readonly deployRepository: Repository<Deploy>,
@@ -97,53 +109,56 @@ export class DeployService {
   async start(
     projectPath: string,
     deploy: Deploy,
-  ): Promise<{ stdout: string; stderr: string }> {
+  ): Promise<DeployResult> {
     const projectInstance = await this.resolveProjectInstance(deploy);
     if (projectInstance) {
       await this.gitPull(projectPath, projectInstance.branch);
       await this.configFileService.writeFilesForInstance(projectInstance, projectPath);
     }
-    const buildResponse = await this.runBuildCommands(projectPath, deploy);
+    const build = await this.runBuildCommands(projectPath, deploy);
     logger.success(
       `[DeployService] Build completed for deploy ${deploy.name} [ID: ${deploy.id}]`,
     );
     if (deploy.isStaticSite) {
-      return { stdout: buildResponse.stdout, stderr: "" };
+      return { build };
     }
-    return await this.pm2Service.start(
+    const start = await this.pm2Service.start(
       deploy.name,
       deploy.startCommands,
       path.join(projectPath, deploy.startPath),
     );
+    return { build, start };
   }
 
   async restart(
     projectPath: string,
     deploy: Deploy,
-  ): Promise<{ stdout: string; stderr: string }> {
+  ): Promise<DeployResult> {
     const projectInstance = await this.resolveProjectInstance(deploy);
     if (projectInstance) {
       await this.gitPull(projectPath, projectInstance.branch);
       await this.configFileService.writeFilesForInstance(projectInstance, projectPath);
     }
-    const buildResponse = await this.runBuildCommands(projectPath, deploy);
+    const build = await this.runBuildCommands(projectPath, deploy);
     if (deploy.isStaticSite) {
-      return { stdout: buildResponse.stdout, stderr: "" };
+      return { build };
     }
-    return await this.pm2Service.restart(
+    const restart = await this.pm2Service.restart(
       deploy.name,
       path.join(projectPath, deploy.startPath),
     );
+    return { build, restart };
   }
 
   async stop(
     projectPath: string,
     deploy: Deploy,
-  ): Promise<{ stdout: string; stderr: string }> {
-    return await this.pm2Service.stop(
+  ): Promise<DeployResult> {
+    const stop = await this.pm2Service.stop(
       deploy.name,
       path.join(projectPath, deploy.startPath),
     );
+    return { stop };
   }
 
   private async resolveProjectInstance(deploy: Deploy) {
@@ -164,7 +179,7 @@ export class DeployService {
     return path.join(deploy.projectInstance.path, repoDir);
   }
 
-  async startOrRestart(id: number): Promise<Deploy> {
+  async startOrRestart(id: number): Promise<{ deploy: Deploy; results: DeployResult } | null> {
     const deploy = await this.deployRepository.findOne({
       where: { id },
       relations: {
@@ -215,11 +230,16 @@ export class DeployService {
       if (deployError) throw new Error(deployError.error);
 
       deploy.started = true;
-      return this.deployRepository.save(deploy);
+      const savedDeploy = await this.deployRepository.save(deploy);
+      const slaveResult = response.results.find((r) => r.name === deploy.name);
+      const results: DeployResult = slaveResult
+        ? { build: slaveResult.build, start: slaveResult.start, restart: slaveResult.restart }
+        : {};
+      return { deploy: savedDeploy, results };
     }
 
     const instanceDir = this.getInstanceDir(deploy);
-    let result: { stdout: string; stderr: string };
+    let result: DeployResult;
 
     if (!deploy.started) {
       result = await this.start(instanceDir, deploy);
@@ -227,15 +247,17 @@ export class DeployService {
       result = await this.restart(instanceDir, deploy);
     }
 
-    if (result.stderr) {
-      throw new Error(result.stderr);
+    const actionStderr = result.start?.stderr ?? result.restart?.stderr ?? "";
+    if (actionStderr) {
+      throw new Error(actionStderr);
     }
 
     deploy.started = true;
-    return this.deployRepository.save(deploy);
+    const savedDeploy = await this.deployRepository.save(deploy);
+    return { deploy: savedDeploy, results: result };
   }
 
-  async stopById(id: number): Promise<Deploy | null> {
+  async stopById(id: number): Promise<{ deploy: Deploy; results: DeployResult } | null> {
     const deploy = await this.deployRepository.findOne({
       where: { id },
       relations: {
@@ -251,18 +273,19 @@ export class DeployService {
     }
 
     if (deploy.projectInstance.slaveServer) {
-      await this.slaveServerClient.stop(deploy.projectInstance.slaveServer, {
+      const response = await this.slaveServerClient.stop(deploy.projectInstance.slaveServer, {
         instancePath: deploy.projectInstance.path,
         cloneLine: deploy.projectInstance.project.cloneLine,
         deployName: deploy.name,
         startPath: deploy.startPath,
       });
-      return deploy;
+      const results: DeployResult = { stop: response.result };
+      return { deploy, results };
     }
 
     const instanceDir = this.getInstanceDir(deploy);
-    await this.stop(instanceDir, deploy);
-    return deploy;
+    const result = await this.stop(instanceDir, deploy);
+    return { deploy, results: result };
   }
 
   // async runDeploy(deploy: Deploy): Promise<void> {

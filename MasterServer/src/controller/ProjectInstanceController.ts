@@ -144,7 +144,7 @@ export class ProjectInstanceController {
     try {
       const { id } = req.params;
       const instance = await this.projectInstanceService.findById(Number(id));
-      const errors =
+      const { errors, results } =
         await this.projectInstanceService.startOrRestartDeploys(instance);
 
       if (errors.length > 0) {
@@ -155,10 +155,11 @@ export class ProjectInstanceController {
             deploy: deploy.name,
             error: error.message,
           })),
+          results,
         });
       }
 
-      return res.status(200).json({ ok: true, message: "All deploys started" });
+      return res.status(200).json({ ok: true, message: "All deploys started", results });
     } catch (error) {
       if (error.statusCode === 404) {
         return res.status(404).json({ ok: false, error: error.message });

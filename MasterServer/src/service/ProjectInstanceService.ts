@@ -6,7 +6,7 @@ import NginxConfig from "../entity/NginxConfig";
 import Deploy from "../entity/Deploy";
 import { getRepository } from "../dbConnection";
 import { NotFoundError } from "../errors/AppError";
-import { DeployService } from "./DeployService";
+import { DeployService, DeployLog, DeployResult } from "./DeployService";
 import { ConfigFileService } from "./ConfigFileService";
 import { GitHubService } from "./GitHubService";
 import { SlaveServerClient } from "./SlaveServerClient";
@@ -147,9 +147,13 @@ export class ProjectInstanceService {
 
   async startOrRestartDeploys(
     instance: ProjectInstance,
-  ): Promise<{ deploy: Deploy; error: Error }[]> {
+  ): Promise<{
+    errors: { deploy: Deploy; error: Error }[];
+    results: Array<{ name: string } & DeployResult>;
+  }> {
     const succeeded: Deploy[] = [];
     const errors: { deploy: Deploy; error: Error }[] = [];
+    const results: Array<{ name: string } & DeployResult> = [];
 
     if (!instance.project || !instance.deploys) {
       const repository = await getRepository(ProjectInstance);
@@ -202,10 +206,18 @@ export class ProjectInstanceService {
         })),
       });
 
-      return response.errors.map((e) => ({
-        deploy: instance.deploys.find((d) => d.name === e.deployName) ?? instance.deploys[0],
-        error: new Error(e.error),
-      }));
+      return {
+        errors: response.errors.map((e) => ({
+          deploy: instance.deploys.find((d) => d.name === e.deployName) ?? instance.deploys[0],
+          error: new Error(e.error),
+        })),
+        results: response.results.map((r) => ({
+          name: r.name,
+          build: r.build,
+          start: r.start,
+          restart: r.restart,
+        })),
+      };
     }
 
     const instanceDir = path.join(
@@ -224,8 +236,12 @@ export class ProjectInstanceService {
         const result = deploy.started
           ? await this.deployService.restart(instanceDir, deploy)
           : await this.deployService.start(instanceDir, deploy);
-        if (result.stderr) {
-          errors.push({ deploy, error: new Error(result.stderr) });
+
+        results.push({ name: deploy.name, ...result });
+
+        const actionStderr = result.start?.stderr ?? result.restart?.stderr ?? "";
+        if (actionStderr) {
+          errors.push({ deploy, error: new Error(actionStderr) });
         } else {
           succeeded.push(deploy);
         }
@@ -242,7 +258,7 @@ export class ProjectInstanceService {
       }
     }
 
-    return errors;
+    return { errors, results };
   }
   async getByRepositoryNameAndBranch(repositoryName: string, branch: string) {
     const repository = await getRepository(ProjectInstance);

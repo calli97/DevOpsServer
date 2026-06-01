@@ -36,7 +36,7 @@ export class GitHubWebhookController {
         if (project.autoUpdate) {
           logger.info(`[Webhook] Auto-updating project: ${project.name}`);
           try {
-            const errors =
+            const { errors } =
               await this.projectInstanceService.startOrRestartDeploys(project);
             if (errors.length > 0) {
               for (const { deploy, error } of errors) {

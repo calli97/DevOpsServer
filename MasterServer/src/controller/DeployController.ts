@@ -95,15 +95,15 @@ export class DeployController {
   startDeploy = async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const deploy = await this.deployService.startOrRestart(Number(id));
+      const outcome = await this.deployService.startOrRestart(Number(id));
 
-      if (!deploy) {
+      if (!outcome) {
         return res
           .status(404)
           .json({ ok: false, error: `Deploy with id '${id}' not found` });
       }
 
-      return res.status(200).json({ ok: true, data: deploy });
+      return res.status(200).json({ ok: true, data: outcome.deploy, results: outcome.results });
     } catch (error) {
       logger.error("[DeployController] Error starting deploy:", error);
       return res.status(500).json({ ok: false, error: error.message });
@@ -113,15 +113,15 @@ export class DeployController {
   stopDeploy = async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const deploy = await this.deployService.stopById(Number(id));
+      const outcome = await this.deployService.stopById(Number(id));
 
-      if (!deploy) {
+      if (!outcome) {
         return res
           .status(404)
           .json({ ok: false, error: `Deploy with id '${id}' not found` });
       }
 
-      return res.status(200).json({ ok: true, data: deploy });
+      return res.status(200).json({ ok: true, data: outcome.deploy, results: outcome.results });
     } catch (error) {
       logger.error("[DeployController] Error stopping deploy:", error);
       return res.status(500).json({ ok: false, error: error.message });
