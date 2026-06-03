@@ -7,11 +7,15 @@ import { getRepository } from "../dbConnection";
 import { NotFoundError } from "../errors/AppError";
 import { logger } from "./LogService";
 import { SlaveServerClient } from "./SlaveServerClient";
+import { SlaveServerService } from "./SlaveServerService";
 
 const execAsync = promisify(exec);
 
 export class NginxConfigService {
-  constructor(private slaveClient = new SlaveServerClient()) {}
+  constructor(
+    private slaveClient = new SlaveServerClient(),
+    private slaveServerService = new SlaveServerService(),
+  ) {}
   async findById(id: number): Promise<NginxConfig | null> {
     const repository = await getRepository(NginxConfig);
     return repository.findOne({ where: { id } });
@@ -164,7 +168,12 @@ export class NginxConfigService {
     return { stdout, stderr };
   }
 
-  async testConfig(): Promise<{ ok: boolean; stdout: string; stderr: string }> {
+  async testConfig(target: "master" | number): Promise<{ ok: boolean; stdout: string; stderr: string }> {
+    if (target !== "master") {
+      const slave = await this.slaveServerService.findById(target);
+      const result = await this.slaveClient.testConfig(slave);
+      return { ok: result.ok, stdout: result.stdout ?? "", stderr: result.stderr ?? (result.error ?? "") };
+    }
     try {
       const { stdout, stderr } = await execAsync("sudo nginx -t");
       logger.info("[NginxConfigService] nginx -t:", stdout);
@@ -176,7 +185,12 @@ export class NginxConfigService {
     }
   }
 
-  async reload(): Promise<{ ok: boolean; stdout: string; stderr: string }> {
+  async reload(target: "master" | number): Promise<{ ok: boolean; stdout: string; stderr: string }> {
+    if (target !== "master") {
+      const slave = await this.slaveServerService.findById(target);
+      const result = await this.slaveClient.reload(slave);
+      return { ok: result.ok, stdout: result.stdout ?? "", stderr: result.stderr ?? (result.error ?? "") };
+    }
     try {
       const { stdout, stderr } = await execAsync("sudo systemctl reload nginx");
       logger.info("[NginxConfigService] nginx reload:", stdout);

@@ -49,4 +49,24 @@ export class NginxConfigController {
       res.status(500).json({ ok: false, error: error.message });
     }
   };
+
+  testConfig = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const result = await this.nginxConfigService.testConfig();
+      res.status(200).json(result);
+    } catch (error) {
+      logger.error("[NginxConfigController] Error testing nginx config:", error);
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  };
+
+  reload = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const result = await this.nginxConfigService.reload();
+      res.status(200).json(result);
+    } catch (error) {
+      logger.error("[NginxConfigController] Error reloading nginx:", error);
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  };
 }

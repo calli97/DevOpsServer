@@ -99,6 +99,20 @@ export interface SlaveNginxDeleteFileResponse {
   error?: string;
 }
 
+export interface SlaveNginxTestConfigResponse {
+  ok: boolean;
+  stdout?: string;
+  stderr?: string;
+  error?: string;
+}
+
+export interface SlaveNginxReloadResponse {
+  ok: boolean;
+  stdout?: string;
+  stderr?: string;
+  error?: string;
+}
+
 export class SlaveServerClient {
   private getBaseUrl(slaveServer: SlaveServer): string {
     const port = slaveServer.puerto ? `:${slaveServer.puerto}` : "";
@@ -330,6 +344,34 @@ export class SlaveServerClient {
         body: bodyStr,
       });
       return response.json() as Promise<SlaveNginxDeleteFileResponse>;
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+
+  async testConfig(slaveServer: SlaveServer): Promise<SlaveNginxTestConfigResponse> {
+    const routePath = "/nginx-config/test-config";
+    const url = `${this.getBaseUrl(slaveServer)}${routePath}`;
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: this.getHeaders(slaveServer, "POST", routePath),
+      });
+      return response.json() as Promise<SlaveNginxTestConfigResponse>;
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+
+  async reload(slaveServer: SlaveServer): Promise<SlaveNginxReloadResponse> {
+    const routePath = "/nginx-config/reload";
+    const url = `${this.getBaseUrl(slaveServer)}${routePath}`;
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: this.getHeaders(slaveServer, "POST", routePath),
+      });
+      return response.json() as Promise<SlaveNginxReloadResponse>;
     } catch (error) {
       return { ok: false, error: error instanceof Error ? error.message : String(error) };
     }

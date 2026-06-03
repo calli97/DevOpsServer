@@ -16,5 +16,7 @@ router.get("/read", validate(nginxReadQuerySchema, "query"), (req, res) => getCo
 router.post("/write", validate(nginxWriteBodySchema), (req, res) => getController().writeFile(req, res));
 router.post("/run-commands", validate(nginxRunCommandsBodySchema), (req, res) => getController().runCommands(req, res));
 router.delete("/file", validate(nginxDeleteFileBodySchema), (req, res) => getController().deleteFile(req, res));
+router.post("/test-config", (req, res) => getController().testConfig(req, res));
+router.post("/reload", (req, res) => getController().reload(req, res));
 
 export default router;

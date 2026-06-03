@@ -91,7 +91,8 @@ export class NginxConfigController {
 
   testConfig = async (req: Request, res: Response) => {
     try {
-      const result = await this.nginxConfigService.testConfig();
+      const { target } = req.body as { target: "master" | number };
+      const result = await this.nginxConfigService.testConfig(target);
       return res.status(200).json(result);
     } catch (error) {
       logger.error("[NginxConfigController] Error testing nginx config:", error);
@@ -101,7 +102,8 @@ export class NginxConfigController {
 
   reload = async (req: Request, res: Response) => {
     try {
-      const result = await this.nginxConfigService.reload();
+      const { target } = req.body as { target: "master" | number };
+      const result = await this.nginxConfigService.reload(target);
       return res.status(200).json(result);
     } catch (error) {
       logger.error("[NginxConfigController] Error reloading nginx:", error);

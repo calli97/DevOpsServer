@@ -19,6 +19,11 @@ export const forceSyncSchema = z.object({
   source: z.enum(["stored", "current"]),
 });
 
+export const nginxTargetSchema = z.object({
+  target: z.union([z.literal("master"), z.number().int().positive()]),
+});
+
 export type CreateNginxConfigDto = z.infer<typeof createNginxConfigSchema>;
 export type UpdateNginxConfigDto = z.infer<typeof updateNginxConfigSchema>;
 export type ForceSyncDto = z.infer<typeof forceSyncSchema>;
+export type NginxTargetDto = z.infer<typeof nginxTargetSchema>;
