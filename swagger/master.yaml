@@ -1,0 +1,1497 @@
+openapi: 3.0.3
+
+info:
+  title: DevOps Master Server API
+  version: "1.0.0"
+  description: |
+    API del servidor maestro del sistema CI/CD. Administra proyectos, instancias,
+    deploys, archivos de configuración, configuraciones nginx y servidores slave.
+
+    ## Autenticación
+    Todos los endpoints (excepto `/github/webhook`) requieren el header `x-api-key`
+    con la clave configurada en el servidor.
+
+    ## Formato de respuestas
+    - **Éxito:** `{ "ok": true, "data": <T> }` o `{ "ok": true, "message": "..." }`
+    - **Error:** `{ "ok": false, "error": "..." }`
+
+servers:
+  - url: http://localhost:3070
+    description: Local
+
+security:
+  - ApiKeyAuth: []
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+
+  schemas:
+
+    # ── Entidades ──────────────────────────────────────────────────────────────
+
+    Project:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "my-app"
+        repository:
+          type: string
+          example: "git@github.com:org/my-app.git"
+        cloneLine:
+          type: string
+          description: Comando completo usado para clonar el repositorio
+          example: "git clone git@github.com:org/my-app.git ."
+
+    ProjectInstance:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "production"
+        branch:
+          type: string
+          example: "main"
+        path:
+          type: string
+          description: Ruta absoluta en el servidor donde se clona el repositorio
+          example: "/srv/apps/my-app-prod"
+        autoUpdate:
+          type: boolean
+          description: Si true, se redeploya automáticamente al recibir un webhook de GitHub
+          example: false
+        cloned:
+          type: boolean
+          description: Indica si el repositorio ya fue clonado en el servidor destino
+          example: true
+        afterDeployCommands:
+          type: string
+          nullable: true
+          description: Comandos a ejecutar luego de cada deploy
+          example: "npm run migrate"
+        project:
+          $ref: '#/components/schemas/Project'
+        slaveServer:
+          allOf:
+            - $ref: '#/components/schemas/SlaveServer'
+          nullable: true
+          description: Servidor slave donde corre la instancia. null = corre en el master
+
+    Deploy:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          description: Nombre del proceso en PM2
+          example: "my-app-api"
+        startPath:
+          type: string
+          description: Subdirectorio relativo a `path` de la instancia desde donde se ejecutan los comandos
+          example: "backend"
+        buildCommands:
+          type: string
+          nullable: true
+          description: Comandos de build ejecutados antes de iniciar. Separados por nueva línea.
+          example: "npm install\nnpm run build"
+        startCommands:
+          type: string
+          description: Comando para iniciar el proceso con PM2
+          example: "node dist/index.js"
+        started:
+          type: boolean
+          description: Indica si el proceso está actualmente activo en PM2
+          example: true
+        isStaticSite:
+          type: boolean
+          description: Si true, es un sitio estático (no se levanta proceso, sólo se sirven archivos)
+          example: false
+        projectInstance:
+          $ref: '#/components/schemas/ProjectInstance'
+
+    ConfigFile:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: ".env"
+        relativePath:
+          type: string
+          description: Ruta relativa dentro del repositorio donde se escribe el archivo
+          example: "backend/.env"
+        content:
+          type: string
+          description: Contenido completo del archivo
+          example: "DATABASE_URL=postgres://..."
+        projectInstance:
+          $ref: '#/components/schemas/ProjectInstance'
+
+    NginxConfig:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "my-app.conf"
+        path:
+          type: string
+          description: Directorio en el servidor donde se almacena el archivo nginx
+          example: "/etc/nginx/sites-available"
+        content:
+          type: string
+          description: Contenido del bloque de configuración nginx
+          example: "server { listen 80; ... }"
+        command:
+          type: string
+          description: Comandos a ejecutar para activar la configuración (ln -s, nginx -t, etc.)
+          example: "ln -sf /etc/nginx/sites-available/my-app.conf /etc/nginx/sites-enabled/"
+        created:
+          type: boolean
+          description: Indica si el archivo fue creado/sincronizado en el servidor destino
+          example: true
+        projectInstance:
+          $ref: '#/components/schemas/ProjectInstance'
+
+    SlaveServer:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        nombre:
+          type: string
+          example: "server-us-east"
+        host:
+          type: string
+          example: "192.168.1.100"
+        puerto:
+          type: integer
+          nullable: true
+          description: Puerto del SlaveServer. null usa el puerto por defecto (3041)
+          example: 3041
+        apiKey:
+          type: string
+          example: "secret-key"
+
+    # ── DTOs de request ────────────────────────────────────────────────────────
+
+    CreateProjectRequest:
+      type: object
+      required: [name, repository, cloneLine]
+      properties:
+        name:
+          type: string
+          example: "my-app"
+        repository:
+          type: string
+          example: "git@github.com:org/my-app.git"
+        cloneLine:
+          type: string
+          example: "git clone git@github.com:org/my-app.git ."
+
+    UpdateProjectRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        repository:
+          type: string
+        cloneLine:
+          type: string
+
+    CreateProjectInstanceRequest:
+      type: object
+      required: [name, branch, path, projectId]
+      properties:
+        name:
+          type: string
+          example: "production"
+        branch:
+          type: string
+          example: "main"
+        path:
+          type: string
+          example: "/srv/apps/my-app-prod"
+        autoUpdate:
+          type: boolean
+          default: false
+        afterDeployCommands:
+          type: string
+          nullable: true
+          example: "npm run migrate"
+        projectId:
+          type: integer
+          example: 1
+        slaveServerId:
+          type: integer
+          nullable: true
+          description: ID del slave donde corre la instancia. null = master local
+          example: null
+
+    UpdateProjectInstanceRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        branch:
+          type: string
+        path:
+          type: string
+        autoUpdate:
+          type: boolean
+        afterDeployCommands:
+          type: string
+          nullable: true
+        slaveServerId:
+          type: integer
+          nullable: true
+
+    CreateDeployRequest:
+      type: object
+      required: [name, startPath, startCommands, projectInstanceId]
+      properties:
+        name:
+          type: string
+          example: "my-app-api"
+        startPath:
+          type: string
+          example: "backend"
+        buildCommands:
+          type: string
+          nullable: true
+          example: "npm install\nnpm run build"
+        startCommands:
+          type: string
+          example: "node dist/index.js"
+        projectInstanceId:
+          type: integer
+          example: 1
+
+    UpdateDeployRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        startPath:
+          type: string
+        buildCommands:
+          type: string
+          nullable: true
+        startCommands:
+          type: string
+        isStaticSite:
+          type: boolean
+
+    CreateConfigFileRequest:
+      type: object
+      required: [name, relativePath, content, projectInstanceId]
+      properties:
+        name:
+          type: string
+          example: ".env"
+        relativePath:
+          type: string
+          example: "backend/.env"
+        content:
+          type: string
+          example: "DATABASE_URL=postgres://user:pass@localhost/db"
+        projectInstanceId:
+          type: integer
+          example: 1
+
+    UpdateConfigFileRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        relativePath:
+          type: string
+        content:
+          type: string
+
+    CreateNginxConfigRequest:
+      type: object
+      required: [name, path, content, command, projectInstanceId]
+      properties:
+        name:
+          type: string
+          example: "my-app.conf"
+        path:
+          type: string
+          example: "/etc/nginx/sites-available"
+        content:
+          type: string
+          example: "server { listen 80; server_name example.com; ... }"
+        command:
+          type: string
+          description: Shell commands ejecutados en el servidor para activar la config
+          example: "ln -sf /etc/nginx/sites-available/my-app.conf /etc/nginx/sites-enabled/"
+        projectInstanceId:
+          type: integer
+          example: 1
+
+    UpdateNginxConfigRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        path:
+          type: string
+        content:
+          type: string
+        command:
+          type: string
+
+    NginxTargetRequest:
+      type: object
+      required: [target]
+      properties:
+        target:
+          description: '"master" para ejecutar en el master local, o el ID del slave server'
+          oneOf:
+            - type: string
+              enum: [master]
+            - type: integer
+              minimum: 1
+          example: "master"
+
+    ForceSyncRequest:
+      type: object
+      required: [source]
+      properties:
+        source:
+          type: string
+          enum: [stored, current]
+          description: |
+            - `stored`: sincroniza desde el contenido almacenado en la DB
+            - `current`: sincroniza desde el archivo actualmente en disco
+
+    CreateSlaveServerRequest:
+      type: object
+      required: [nombre, host, apiKey]
+      properties:
+        nombre:
+          type: string
+          example: "server-us-east"
+        host:
+          type: string
+          example: "192.168.1.100"
+        puerto:
+          type: integer
+          example: 3041
+        apiKey:
+          type: string
+          example: "secret-api-key"
+
+    UpdateSlaveServerRequest:
+      type: object
+      properties:
+        nombre:
+          type: string
+        host:
+          type: string
+        puerto:
+          type: integer
+        apiKey:
+          type: string
+
+    # ── Respuestas genéricas ───────────────────────────────────────────────────
+
+    ErrorResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: "Not found"
+
+    MessageResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Resource deleted"
+
+# ── Paths ──────────────────────────────────────────────────────────────────────
+
+paths:
+
+  /status:
+    get:
+      summary: Health check
+      tags: [General]
+      security: []
+      responses:
+        "200":
+          description: Servidor activo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+
+  # ── Projects ──────────────────────────────────────────────────────────────
+
+  /projects:
+    get:
+      summary: Listar todos los proyectos
+      tags: [Projects]
+      responses:
+        "200":
+          description: Lista de proyectos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Project'
+    post:
+      summary: Crear un proyecto
+      tags: [Projects]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectRequest'
+      responses:
+        "200":
+          description: Proyecto creado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Project'
+
+  /projects/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      summary: Obtener un proyecto por ID
+      tags: [Projects]
+      responses:
+        "200":
+          description: Proyecto encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Project'
+        "404":
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      summary: Actualizar un proyecto
+      tags: [Projects]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProjectRequest'
+      responses:
+        "200":
+          description: Proyecto actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Project'
+        "404":
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      summary: Eliminar un proyecto
+      tags: [Projects]
+      responses:
+        "200":
+          description: Proyecto eliminado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        "404":
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ── Project Instances ──────────────────────────────────────────────────────
+
+  /project-instances:
+    get:
+      summary: Listar todas las instancias de proyecto
+      tags: [Project Instances]
+      responses:
+        "200":
+          description: Lista de instancias
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProjectInstance'
+    post:
+      summary: Crear una instancia de proyecto
+      description: |
+        Crea una nueva instancia asociada a un proyecto. Si se especifica `slaveServerId`,
+        la instancia se ejecutará en ese servidor slave; de lo contrario, corre en el master.
+      tags: [Project Instances]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectInstanceRequest'
+      responses:
+        "200":
+          description: Instancia creada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/ProjectInstance'
+
+  /project-instances/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      summary: Obtener una instancia por ID
+      tags: [Project Instances]
+      responses:
+        "200":
+          description: Instancia encontrada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/ProjectInstance'
+        "404":
+          description: No encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      summary: Actualizar una instancia
+      tags: [Project Instances]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProjectInstanceRequest'
+      responses:
+        "200":
+          description: Instancia actualizada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/ProjectInstance'
+        "404":
+          description: No encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      summary: Eliminar una instancia
+      tags: [Project Instances]
+      responses:
+        "200":
+          description: Instancia eliminada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        "404":
+          description: No encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /project-instances/{id}/start:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    post:
+      summary: Iniciar / redesplegar una instancia
+      description: |
+        Ejecuta el flujo completo de deploy para la instancia:
+        1. Clona el repositorio si no fue clonado aún
+        2. Escribe los config files en disco
+        3. Hace `git pull` en el branch configurado
+        4. Escribe las configs nginx y ejecuta sus comandos
+        5. Ejecuta build y start/restart de cada Deploy asociado
+
+        Si la instancia tiene un `slaveServerId`, las operaciones se delegan al slave correspondiente.
+      tags: [Project Instances]
+      responses:
+        "200":
+          description: Deploy iniciado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+
+  # ── Deploys ───────────────────────────────────────────────────────────────
+
+  /deploys:
+    get:
+      summary: Listar todos los deploys
+      tags: [Deploys]
+      responses:
+        "200":
+          description: Lista de deploys
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Deploy'
+    post:
+      summary: Crear un deploy
+      description: |
+        Un Deploy representa un proceso (servicio) dentro de una ProjectInstance.
+        Se ejecuta con PM2. Cada instancia puede tener múltiples deploys (ej: backend + worker).
+      tags: [Deploys]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDeployRequest'
+      responses:
+        "200":
+          description: Deploy creado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Deploy'
+
+  /deploys/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      summary: Obtener un deploy por ID
+      tags: [Deploys]
+      responses:
+        "200":
+          description: Deploy encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Deploy'
+        "404":
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      summary: Actualizar un deploy
+      tags: [Deploys]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDeployRequest'
+      responses:
+        "200":
+          description: Deploy actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Deploy'
+        "404":
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      summary: Eliminar un deploy
+      tags: [Deploys]
+      responses:
+        "200":
+          description: Deploy eliminado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        "404":
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /deploys/{id}/start:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    post:
+      summary: Iniciar o reiniciar un deploy específico
+      description: |
+        Ejecuta build (si tiene `buildCommands`) y luego start o restart del proceso en PM2.
+        Si la instancia corre en un slave, las operaciones se delegan a ese slave.
+      tags: [Deploys]
+      responses:
+        "200":
+          description: Deploy iniciado/reiniciado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+
+  /deploys/{id}/stop:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    post:
+      summary: Detener un deploy
+      description: |
+        Detiene el proceso PM2 correspondiente al deploy.
+        Si la instancia corre en un slave, la operación se delega a ese slave.
+      tags: [Deploys]
+      responses:
+        "200":
+          description: Deploy detenido
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+
+  # ── Config Files ──────────────────────────────────────────────────────────
+
+  /config-files:
+    get:
+      summary: Listar todos los config files
+      tags: [Config Files]
+      responses:
+        "200":
+          description: Lista de config files
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ConfigFile'
+    post:
+      summary: Crear un config file
+      description: |
+        Los config files son archivos (ej: `.env`) que se escriben en el repositorio
+        antes de cada deploy. Se almacena su contenido en la DB y se escriben en disco
+        en la ruta `instance.path + "/" + relativePath`.
+      tags: [Config Files]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateConfigFileRequest'
+      responses:
+        "200":
+          description: Config file creado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/ConfigFile'
+
+  /config-files/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      summary: Obtener un config file por ID
+      tags: [Config Files]
+      responses:
+        "200":
+          description: Config file encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/ConfigFile'
+        "404":
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      summary: Actualizar un config file
+      tags: [Config Files]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateConfigFileRequest'
+      responses:
+        "200":
+          description: Config file actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/ConfigFile'
+        "404":
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      summary: Eliminar un config file
+      tags: [Config Files]
+      responses:
+        "200":
+          description: Config file eliminado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        "404":
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ── Nginx Configs ─────────────────────────────────────────────────────────
+
+  /nginx-configs/by-instance/{instanceId}:
+    parameters:
+      - name: instanceId
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      summary: Listar nginx configs de una instancia
+      tags: [Nginx Configs]
+      responses:
+        "200":
+          description: Lista de nginx configs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/NginxConfig'
+
+  /nginx-configs:
+    post:
+      summary: Crear una nginx config
+      description: |
+        Crea una configuración nginx asociada a una instancia. El `content` es el bloque
+        de configuración nginx, `path` es el directorio destino en el servidor, y `command`
+        son los comandos shell para activar la config (crear symlinks, recargar nginx, etc.).
+      tags: [Nginx Configs]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateNginxConfigRequest'
+      responses:
+        "200":
+          description: Nginx config creada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/NginxConfig'
+
+  /nginx-configs/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    put:
+      summary: Actualizar una nginx config
+      tags: [Nginx Configs]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateNginxConfigRequest'
+      responses:
+        "200":
+          description: Nginx config actualizada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/NginxConfig'
+        "404":
+          description: No encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      summary: Eliminar una nginx config
+      tags: [Nginx Configs]
+      responses:
+        "200":
+          description: Nginx config eliminada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        "404":
+          description: No encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /nginx-configs/{id}/run-commands:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    post:
+      summary: Ejecutar los comandos de la nginx config
+      description: |
+        Ejecuta los `command` almacenados en la config en el servidor correspondiente
+        (master o slave según la instancia). Usado para activar/actualizar la config
+        sin hacer un deploy completo.
+      tags: [Nginx Configs]
+      responses:
+        "200":
+          description: Comandos ejecutados
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+
+  /nginx-configs/test-config:
+    post:
+      summary: Testear la configuración nginx
+      description: Ejecuta `nginx -t` en el servidor target para validar la sintaxis.
+      tags: [Nginx Configs]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NginxTargetRequest'
+      responses:
+        "200":
+          description: Resultado del test
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+
+  /nginx-configs/reload:
+    post:
+      summary: Recargar nginx
+      description: Ejecuta `nginx -s reload` en el servidor target.
+      tags: [Nginx Configs]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NginxTargetRequest'
+      responses:
+        "200":
+          description: Nginx recargado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+
+  /nginx-configs/{id}/sync-status:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      summary: Estado de sincronización de una nginx config
+      description: |
+        Compara el contenido almacenado en la DB con el archivo actualmente en disco
+        en el servidor destino, e indica si están sincronizados.
+      tags: [Nginx Configs]
+      responses:
+        "200":
+          description: Estado de sincronización
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      synced:
+                        type: boolean
+                      storedContent:
+                        type: string
+                      currentContent:
+                        type: string
+
+  /nginx-configs/{id}/force-sync:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    post:
+      summary: Forzar sincronización de una nginx config
+      description: |
+        Sincroniza la nginx config entre la DB y disco.
+        - `source: "stored"`: escribe en disco el contenido de la DB
+        - `source: "current"`: actualiza la DB con el contenido actual en disco
+      tags: [Nginx Configs]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForceSyncRequest'
+      responses:
+        "200":
+          description: Sincronización completada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+
+  # ── Slave Servers ─────────────────────────────────────────────────────────
+
+  /slave-servers:
+    get:
+      summary: Listar todos los slave servers
+      tags: [Slave Servers]
+      responses:
+        "200":
+          description: Lista de slave servers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SlaveServer'
+    post:
+      summary: Registrar un slave server
+      description: |
+        Registra un servidor slave en el master. El slave debe estar corriendo
+        y ser accesible desde el master via `host:puerto`.
+      tags: [Slave Servers]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSlaveServerRequest'
+      responses:
+        "200":
+          description: Slave server registrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/SlaveServer'
+
+  /slave-servers/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      summary: Obtener un slave server por ID
+      tags: [Slave Servers]
+      responses:
+        "200":
+          description: Slave server encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/SlaveServer'
+        "404":
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      summary: Actualizar un slave server
+      tags: [Slave Servers]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSlaveServerRequest'
+      responses:
+        "200":
+          description: Slave server actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/SlaveServer'
+        "404":
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      summary: Eliminar un slave server
+      tags: [Slave Servers]
+      responses:
+        "200":
+          description: Slave server eliminado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        "404":
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /slave-servers/{id}/status:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      summary: Verificar estado del slave server
+      description: Hace ping al slave server y retorna si está online y accesible.
+      tags: [Slave Servers]
+      responses:
+        "200":
+          description: Estado del slave
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      online:
+                        type: boolean
+
+  # ── GitHub Webhook ────────────────────────────────────────────────────────
+
+  /github/webhook:
+    post:
+      summary: Recibir webhook de GitHub
+      description: |
+        Endpoint para recibir eventos `push` de GitHub. Cuando llega un push en un branch
+        que tenga `autoUpdate: true` en alguna ProjectInstance, se dispara el deploy
+        automáticamente.
+
+        **Autenticación:** No usa `x-api-key`. En su lugar requiere la firma HMAC-SHA256
+        de GitHub en el header `x-hub-signature` (usando el `githubWebhookSecret` configurado).
+
+        **Body:** Se recibe como buffer raw (no JSON parseado) para verificar la firma correctamente.
+      tags: [GitHub]
+      security: []
+      parameters:
+        - name: x-hub-signature
+          in: header
+          required: true
+          schema:
+            type: string
+          description: "Firma HMAC-SHA256 del payload. Formato: `sha1=<hash>`"
+        - name: x-github-event
+          in: header
+          required: false
+          schema:
+            type: string
+          description: "Tipo de evento GitHub. El servidor procesa únicamente `push`."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Payload estándar de webhook push de GitHub
+              properties:
+                ref:
+                  type: string
+                  description: "Referencia del branch. Ej: `refs/heads/main`"
+                  example: "refs/heads/main"
+                repository:
+                  type: object
+                  properties:
+                    clone_url:
+                      type: string
+                      example: "https://github.com/org/my-app.git"
+      responses:
+        "200":
+          description: Webhook procesado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+        "401":
+          description: Firma inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+tags:
+  - name: General
+    description: Endpoints generales
+  - name: Projects
+    description: Gestión de proyectos (repositorios git)
+  - name: Project Instances
+    description: Instancias de un proyecto (branch + servidor de destino)
+  - name: Deploys
+    description: Procesos PM2 que corren dentro de una instancia
+  - name: Config Files
+    description: Archivos de configuración (ej .env) escritos en cada deploy
+  - name: Nginx Configs
+    description: Configuraciones nginx asociadas a instancias
+  - name: Slave Servers
+    description: Servidores remotos donde corren las instancias
+  - name: GitHub
+    description: Integración con webhooks de GitHub para auto-deploy

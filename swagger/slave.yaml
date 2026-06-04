@@ -1,0 +1,560 @@
+openapi: 3.0.3
+
+info:
+  title: DevOps Slave Server API
+  version: "1.0.0"
+  description: |
+    API del servidor slave del sistema CI/CD. Ejecuta operaciones de bajo nivel en el servidor
+    donde corren las aplicaciones: clonar repos, build y gestión de procesos PM2, escritura de
+    archivos de configuración y gestión de nginx.
+
+    El slave normalmente **no es llamado directamente** — es el MasterServer quien lo invoca.
+    Sin embargo, sus endpoints están documentados aquí para referencia y diagnóstico.
+
+    ## Autenticación — HMAC-SHA256
+
+    Todos los endpoints requieren dos headers:
+
+    | Header | Descripción |
+    |--------|-------------|
+    | `x-timestamp` | Timestamp Unix en milisegundos (string) |
+    | `x-signature` | HMAC-SHA256 del payload de firma (ver abajo) |
+
+    **Construcción del payload de firma:**
+    ```
+    METHOD\nPATH\nTIMESTAMP\nBODY
+    ```
+    - `METHOD`: método HTTP en mayúsculas (`GET`, `POST`, `DELETE`, etc.)
+    - `PATH`: ruta completa incluyendo query string (ej: `/nginx-config/read?path=/etc/nginx&name=app.conf`)
+    - `TIMESTAMP`: el mismo valor enviado en `x-timestamp`
+    - `BODY`: cuerpo de la request como string (vacío `""` si no hay body)
+
+    El servidor rechaza requests con timestamp fuera de una ventana de ±5 minutos.
+
+    ## Formato de respuestas
+    - **Éxito:** `{ "ok": true, ... }` (campos adicionales según el endpoint)
+    - **Error:** `{ "ok": false, "error": "..." }`
+
+servers:
+  - url: http://localhost:3041
+    description: Local
+
+security:
+  - HmacAuth: []
+
+components:
+  securitySchemes:
+    HmacAuth:
+      type: apiKey
+      in: header
+      name: x-signature
+      description: |
+        HMAC-SHA256 del payload `METHOD\nPATH\nTIMESTAMP\nBODY`.
+        Acompañar siempre con el header `x-timestamp`.
+
+  schemas:
+
+    # ── DTOs anidados ──────────────────────────────────────────────────────────
+
+    DeployDto:
+      type: object
+      required: [name, startCommands, started, isStaticSite]
+      description: Representa un proceso PM2 a iniciar o reiniciar
+      properties:
+        name:
+          type: string
+          description: Nombre del proceso en PM2
+          example: "my-app-api"
+        startPath:
+          type: string
+          description: Subdirectorio relativo a `instancePath` desde donde se ejecutan los comandos
+          example: "backend"
+        buildCommands:
+          type: string
+          nullable: true
+          description: Comandos de build (separados por nueva línea). null si no hay build.
+          example: "npm install\nnpm run build"
+        startCommands:
+          type: string
+          description: Comando para iniciar el proceso en PM2
+          example: "node dist/index.js"
+        started:
+          type: boolean
+          description: Si true, el proceso ya existe en PM2 y se hará restart; si false, se hará start
+          example: false
+        isStaticSite:
+          type: boolean
+          description: Si true, es un sitio estático (no levanta proceso PM2, sólo escribe archivos)
+          example: false
+
+    ConfigFileDto:
+      type: object
+      required: [name, relativePath, content]
+      description: Archivo de configuración a escribir en disco antes del deploy
+      properties:
+        name:
+          type: string
+          example: ".env"
+        relativePath:
+          type: string
+          description: Ruta relativa dentro del repositorio
+          example: "backend/.env"
+        content:
+          type: string
+          description: Contenido del archivo
+          example: "DATABASE_URL=postgres://user:pass@localhost/db\nPORT=3000"
+
+    NginxConfigDto:
+      type: object
+      required: [name, path, content, command]
+      description: Configuración nginx a escribir y activar en el servidor
+      properties:
+        name:
+          type: string
+          example: "my-app.conf"
+        path:
+          type: string
+          description: Directorio en disco donde se escribe el archivo
+          example: "/etc/nginx/sites-available"
+        content:
+          type: string
+          description: Contenido del bloque de configuración nginx
+          example: "server { listen 80; server_name example.com; root /srv/apps/my-app/dist; }"
+        command:
+          type: string
+          description: Comandos shell para activar la config (crear symlinks, etc.)
+          example: "ln -sf /etc/nginx/sites-available/my-app.conf /etc/nginx/sites-enabled/"
+
+    DeployLogDto:
+      type: object
+      description: Salida de un comando ejecutado
+      properties:
+        stdout:
+          type: string
+          example: "Build successful\n"
+        stderr:
+          type: string
+          example: ""
+
+    DeployResultDto:
+      type: object
+      description: Resultado de las operaciones sobre un Deploy
+      properties:
+        name:
+          type: string
+          example: "my-app-api"
+        build:
+          $ref: '#/components/schemas/DeployLogDto'
+          description: Resultado del build (presente si hay buildCommands)
+        start:
+          $ref: '#/components/schemas/DeployLogDto'
+          description: Resultado del start PM2 (presente si started=false)
+        restart:
+          $ref: '#/components/schemas/DeployLogDto'
+          description: Resultado del restart PM2 (presente si started=true)
+
+    DeployErrorDto:
+      type: object
+      properties:
+        deployName:
+          type: string
+        error:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          example: false
+        error:
+          type: string
+
+# ── Paths ──────────────────────────────────────────────────────────────────────
+
+paths:
+
+  /status:
+    get:
+      summary: Health check
+      tags: [General]
+      security: []
+      responses:
+        "200":
+          description: Servidor activo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+
+  # ── Clone ─────────────────────────────────────────────────────────────────
+
+  /clone:
+    post:
+      summary: Clonar un repositorio git
+      description: |
+        Clona un repositorio git en el `path` especificado del servidor.
+        Si el directorio ya existe y contiene un repositorio, retorna `cloned: false`
+        sin volver a clonar (idempotente).
+      tags: [Clone]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [cloneLine, path]
+              properties:
+                cloneLine:
+                  type: string
+                  description: Comando git clone completo
+                  example: "git clone git@github.com:org/my-app.git ."
+                path:
+                  type: string
+                  description: Ruta absoluta en el servidor donde clonar
+                  example: "/srv/apps/my-app-prod"
+      responses:
+        "200":
+          description: Resultado del clone
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  cloned:
+                    type: boolean
+                    description: true si se clonó ahora, false si ya existía
+                    example: true
+                  error:
+                    type: string
+                    description: Mensaje de error (presente sólo si ok=false)
+
+  # ── Deploy ────────────────────────────────────────────────────────────────
+
+  /deploy:
+    post:
+      summary: Ejecutar un deploy completo
+      description: |
+        Orquesta el proceso completo de deploy en el servidor:
+
+        1. **Clone / pull**: Si el repo no existe en `instancePath`, lo clona con `cloneLine`.
+           Si ya existe, hace `git pull origin <branch>`.
+        2. **Config files**: Escribe cada archivo de `configFiles` en disco en
+           `instancePath/<relativePath>`.
+        3. **Nginx configs**: Escribe los archivos nginx en sus `path` correspondientes
+           y ejecuta sus `command`.
+        4. **Deploys**: Para cada deploy en `deploys`:
+           - Ejecuta `buildCommands` si existen
+           - Hace `pm2 start <startCommands>` si `started=false`, o `pm2 restart <name>` si `started=true`
+
+        Si algún deploy falla, se reporta en `errors` pero el proceso continúa con los demás.
+      tags: [Deploy]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [instancePath, branch, cloneLine, deploys, configFiles, nginxConfigs]
+              properties:
+                instancePath:
+                  type: string
+                  description: Ruta absoluta base de la instancia en el servidor
+                  example: "/srv/apps/my-app-prod"
+                branch:
+                  type: string
+                  description: Branch a hacer pull
+                  example: "main"
+                cloneLine:
+                  type: string
+                  description: Comando git clone (usado si el repo no existe aún)
+                  example: "git clone git@github.com:org/my-app.git ."
+                deploys:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/DeployDto'
+                configFiles:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ConfigFileDto'
+                nginxConfigs:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/NginxConfigDto'
+      responses:
+        "200":
+          description: Resultado del deploy
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, errors, results]
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  errors:
+                    type: array
+                    description: Errores por deploy (vacío si todo fue bien)
+                    items:
+                      $ref: '#/components/schemas/DeployErrorDto'
+                  results:
+                    type: array
+                    description: Resultado detallado por deploy
+                    items:
+                      $ref: '#/components/schemas/DeployResultDto'
+
+  /deploy/stop:
+    post:
+      summary: Detener un proceso PM2
+      description: |
+        Detiene el proceso PM2 identificado por `deployName` dentro de la instancia en `instancePath`.
+        Internamente construye el nombre PM2 como `<deployName>-<repoFolderName>-<startPath>`.
+      tags: [Deploy]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [instancePath, cloneLine, deployName]
+              properties:
+                instancePath:
+                  type: string
+                  description: Ruta absoluta base de la instancia
+                  example: "/srv/apps/my-app-prod"
+                cloneLine:
+                  type: string
+                  description: Comando git clone (usado para derivar el nombre de carpeta del repo)
+                  example: "git clone git@github.com:org/my-app.git ."
+                deployName:
+                  type: string
+                  description: Nombre del deploy (proceso PM2) a detener
+                  example: "my-app-api"
+                startPath:
+                  type: string
+                  description: Subdirectorio del deploy
+                  example: "backend"
+      responses:
+        "200":
+          description: Resultado de la detención
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  error:
+                    type: string
+                    description: Presente si hubo error
+                  result:
+                    $ref: '#/components/schemas/DeployLogDto'
+
+  # ── Nginx Config ──────────────────────────────────────────────────────────
+
+  /nginx-config/read:
+    get:
+      summary: Leer el contenido de un archivo nginx en disco
+      description: Lee y retorna el contenido del archivo `<path>/<name>` en el servidor.
+      tags: [Nginx Config]
+      parameters:
+        - name: path
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Directorio del archivo
+          example: "/etc/nginx/sites-available"
+        - name: name
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Nombre del archivo
+          example: "my-app.conf"
+      responses:
+        "200":
+          description: Contenido del archivo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  content:
+                    type: string
+                    example: "server { listen 80; ... }"
+
+  /nginx-config/write:
+    post:
+      summary: Escribir un archivo nginx en disco
+      description: |
+        Escribe el archivo `<path>/<name>` con el `content` especificado.
+        Crea los directorios intermedios si no existen.
+      tags: [Nginx Config]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [path, name, content]
+              properties:
+                path:
+                  type: string
+                  description: Directorio destino
+                  example: "/etc/nginx/sites-available"
+                name:
+                  type: string
+                  description: Nombre del archivo
+                  example: "my-app.conf"
+                content:
+                  type: string
+                  description: Contenido a escribir
+                  example: "server { listen 80; server_name example.com; ... }"
+      responses:
+        "200":
+          description: Archivo escrito
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+
+  /nginx-config/run-commands:
+    post:
+      summary: Ejecutar comandos shell nginx
+      description: |
+        Ejecuta el string `command` como comando shell en el servidor.
+        Usado para activar configs (crear symlinks, nginx -t, etc.).
+      tags: [Nginx Config]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [command]
+              properties:
+                command:
+                  type: string
+                  description: Comandos shell a ejecutar
+                  example: "ln -sf /etc/nginx/sites-available/my-app.conf /etc/nginx/sites-enabled/"
+      responses:
+        "200":
+          description: Resultado de la ejecución
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  stdout:
+                    type: string
+                    example: ""
+                  stderr:
+                    type: string
+                    example: ""
+                  error:
+                    type: string
+                    description: Presente si hubo error de ejecución
+
+  /nginx-config/file:
+    delete:
+      summary: Eliminar un archivo nginx de disco
+      description: Elimina el archivo `<path>/<name>` del servidor.
+      tags: [Nginx Config]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [path, name]
+              properties:
+                path:
+                  type: string
+                  example: "/etc/nginx/sites-available"
+                name:
+                  type: string
+                  example: "my-app.conf"
+      responses:
+        "200":
+          description: Archivo eliminado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  error:
+                    type: string
+                    description: Presente si hubo error
+
+  /nginx-config/test-config:
+    post:
+      summary: Testear configuración nginx
+      description: Ejecuta `nginx -t` en el servidor y retorna el resultado.
+      tags: [Nginx Config]
+      responses:
+        "200":
+          description: Resultado del test
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  stdout:
+                    type: string
+                  stderr:
+                    type: string
+
+  /nginx-config/reload:
+    post:
+      summary: Recargar nginx
+      description: Ejecuta `nginx -s reload` en el servidor.
+      tags: [Nginx Config]
+      responses:
+        "200":
+          description: Resultado del reload
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  stdout:
+                    type: string
+                  stderr:
+                    type: string
+
+tags:
+  - name: General
+    description: Endpoints generales
+  - name: Clone
+    description: Clonado de repositorios git
+  - name: Deploy
+    description: Ejecución de deploys y gestión de procesos PM2
+  - name: Nginx Config
+    description: Escritura y gestión de archivos de configuración nginx
