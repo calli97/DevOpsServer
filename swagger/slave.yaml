@@ -549,6 +549,59 @@ paths:
                   stderr:
                     type: string
 
+  # ── Exec ──────────────────────────────────────────────────────────────────
+
+  /exec:
+    post:
+      summary: Ejecutar un comando shell arbitrario
+      description: |
+        Ejecuta el comando `cmd` en el directorio `cwd` del servidor.
+
+        Antes de ejecutar, verifica que `cwd` exista y sea un directorio.
+        Si no existe, retorna `ok: false` sin ejecutar el comando.
+
+        El comando se ejecuta con `child_process.exec`. Si el proceso termina
+        con exit code != 0, retorna `ok: false` con el stdout y stderr capturados.
+      tags: [Exec]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [cmd, cwd]
+              properties:
+                cmd:
+                  type: string
+                  description: Comando shell a ejecutar
+                  example: "ls -la"
+                cwd:
+                  type: string
+                  description: Directorio de trabajo (debe existir en el servidor)
+                  example: "/srv/apps/my-app"
+      responses:
+        "200":
+          description: Resultado de la ejecución
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, stdout, stderr]
+                properties:
+                  ok:
+                    type: boolean
+                    description: true si el comando terminó con exit code 0
+                    example: true
+                  stdout:
+                    type: string
+                    example: "total 48\ndrwxr-xr-x 6 deploy deploy 4096 Jun  5 12:00 .\n"
+                  stderr:
+                    type: string
+                    description: |
+                      Stderr del proceso. Puede ser no vacío incluso con ok=true
+                      (algunos programas usan stderr para mensajes informativos).
+                    example: ""
+
 tags:
   - name: General
     description: Endpoints generales
@@ -558,3 +611,5 @@ tags:
     description: Ejecución de deploys y gestión de procesos PM2
   - name: Nginx Config
     description: Escritura y gestión de archivos de configuración nginx
+  - name: Exec
+    description: Ejecución de comandos shell arbitrarios

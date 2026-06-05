@@ -412,6 +412,26 @@ components:
         apiKey:
           type: string
 
+    ExecRequest:
+      type: object
+      required: [cmd, cwd, target]
+      properties:
+        cmd:
+          type: string
+          description: Comando shell a ejecutar
+          example: "ls -la"
+        cwd:
+          type: string
+          description: Directorio de trabajo (debe existir en el servidor destino)
+          example: "/srv/apps/my-app"
+        target:
+          type: string
+          description: |
+            Servidor donde ejecutar el comando:
+            - `"master"`: se ejecuta localmente en el master server
+            - ID numérico como string (ej: `"2"`): se delega al slave server con ese ID
+          example: "master"
+
     # ── Respuestas genéricas ───────────────────────────────────────────────────
 
     ErrorResponse:
@@ -1413,6 +1433,69 @@ paths:
                       online:
                         type: boolean
 
+  # ── Exec ──────────────────────────────────────────────────────────────────
+
+  /exec:
+    post:
+      summary: Ejecutar un comando shell en master o slave
+      description: |
+        Ejecuta el comando `cmd` en el directorio `cwd` del servidor indicado por `target`.
+
+        - Si `target` es `"master"`, el comando se ejecuta localmente en el master server.
+        - Si `target` es un ID numérico como string (ej: `"2"`), el comando se delega al
+          slave server con ese ID via HMAC-SHA256.
+
+        En ambos casos, antes de ejecutar se verifica que `cwd` exista y sea un directorio.
+        Si no existe, retorna `ok: false` con un mensaje en `stderr` sin ejecutar el comando.
+      tags: [Exec]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecRequest'
+            examples:
+              master:
+                summary: Ejecutar en master
+                value:
+                  cmd: "ls -la"
+                  cwd: "/srv/apps"
+                  target: "master"
+              slave:
+                summary: Ejecutar en slave con ID 2
+                value:
+                  cmd: "pm2 list"
+                  cwd: "/home/deploy"
+                  target: "2"
+      responses:
+        "200":
+          description: Resultado de la ejecución
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, stdout, stderr]
+                properties:
+                  ok:
+                    type: boolean
+                    description: true si el comando terminó con exit code 0
+                    example: true
+                  stdout:
+                    type: string
+                    example: "total 48\ndrwxr-xr-x 6 deploy deploy 4096 Jun  5 12:00 .\n"
+                  stderr:
+                    type: string
+                    description: |
+                      Stderr del proceso. Puede ser no vacío incluso con ok=true.
+                      Si el directorio no existe: `"Directory does not exist: <cwd>"`.
+                    example: ""
+        "404":
+          description: Slave server no encontrado (cuando target es un ID numérico)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   # ── GitHub Webhook ────────────────────────────────────────────────────────
 
   /github/webhook:
@@ -1495,3 +1578,5 @@ tags:
     description: Servidores remotos donde corren las instancias
   - name: GitHub
     description: Integración con webhooks de GitHub para auto-deploy
+  - name: Exec
+    description: Ejecución de comandos shell arbitrarios en master o slave

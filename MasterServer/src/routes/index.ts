@@ -6,6 +6,7 @@ import deploys from "./deploys";
 import configFiles from "./config-files";
 import nginxConfigs from "./nginx-configs";
 import slaveServers from "./slave-servers";
+import exec from "./exec";
 
 const routes = Router();
 
@@ -18,5 +19,6 @@ routes.use("/deploys", deploys);
 routes.use("/config-files", configFiles);
 routes.use("/nginx-configs", nginxConfigs);
 routes.use("/slave-servers", slaveServers);
+routes.use("/exec", exec);
 
 export default routes;

@@ -149,3 +149,10 @@ export const nginxRunCommandsBodySchema = z.object({ command: z.string().min(1) 
 export interface NginxDeleteFileRequest { path: string; name: string; }
 export interface NginxDeleteFileResponse { ok: boolean; error?: string; }
 export const nginxDeleteFileBodySchema = z.object({ path: z.string().min(1), name: z.string().min(1) });
+
+export interface ExecRequest { cmd: string; cwd: string; }
+export interface ExecResponse { ok: boolean; stdout: string; stderr: string; }
+export const execRequestSchema = z.object({
+  cmd: z.string().min(1),
+  cwd: z.string().min(1),
+});

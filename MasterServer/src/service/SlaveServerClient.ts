@@ -113,6 +113,17 @@ export interface SlaveNginxReloadResponse {
   error?: string;
 }
 
+export interface SlaveExecRequest {
+  cmd: string;
+  cwd: string;
+}
+
+export interface SlaveExecResponse {
+  ok: boolean;
+  stdout: string;
+  stderr: string;
+}
+
 export class SlaveServerClient {
   private getBaseUrl(slaveServer: SlaveServer): string {
     const port = slaveServer.puerto ? `:${slaveServer.puerto}` : "";
@@ -374,6 +385,22 @@ export class SlaveServerClient {
       return response.json() as Promise<SlaveNginxReloadResponse>;
     } catch (error) {
       return { ok: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+
+  async exec(slaveServer: SlaveServer, cmd: string, cwd: string): Promise<SlaveExecResponse> {
+    const routePath = "/exec";
+    const bodyStr = JSON.stringify({ cmd, cwd } satisfies SlaveExecRequest);
+    const url = `${this.getBaseUrl(slaveServer)}${routePath}`;
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: this.getHeaders(slaveServer, "POST", routePath, bodyStr),
+        body: bodyStr,
+      });
+      return response.json() as Promise<SlaveExecResponse>;
+    } catch (error) {
+      return { ok: false, stdout: "", stderr: error instanceof Error ? error.message : String(error) };
     }
   }
 }
