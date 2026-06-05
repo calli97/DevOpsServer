@@ -15,8 +15,8 @@ class NginxConfig {
   @Column({ type: "text", nullable: false })
   content: string;
 
-  @Column({ type: "text", nullable: false })
-  command: string;
+  @Column({ type: "text", nullable: true })
+  command: string | null;
 
   @Column({ default: false })
   created: boolean;

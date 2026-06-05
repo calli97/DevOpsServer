@@ -18,11 +18,13 @@ export class NginxConfigService {
       await fs.writeFile(filePath, cfg.content, "utf-8");
       logger.info(`[NginxConfigService] Written: ${filePath}`);
 
-      const cmds: string[] = JSON.parse(cfg.command);
-      if (Array.isArray(cmds) && cmds.length > 0) {
-        const { stdout, stderr } = await execAsync(cmds.join(" && "));
-        logger.info(`[NginxConfigService] Commands for ${cfg.name}:`, stdout);
-        if (stderr) logger.warning(`[NginxConfigService] stderr:`, stderr);
+      if (cfg.command) {
+        const cmds: string[] = JSON.parse(cfg.command);
+        if (Array.isArray(cmds) && cmds.length > 0) {
+          const { stdout, stderr } = await execAsync(cmds.join(" && "));
+          logger.info(`[NginxConfigService] Commands for ${cfg.name}:`, stdout);
+          if (stderr) logger.warning(`[NginxConfigService] stderr:`, stderr);
+        }
       }
     }
 

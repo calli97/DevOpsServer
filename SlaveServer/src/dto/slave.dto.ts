@@ -21,7 +21,7 @@ export interface NginxConfigDto {
   name: string;
   path: string;
   content: string;
-  command: string;
+  command?: string;
 }
 
 export interface CloneRequest {
@@ -99,7 +99,7 @@ export const nginxConfigDtoSchema = z.object({
   name: z.string().min(1),
   path: z.string().min(1),
   content: z.string().min(1),
-  command: z.string().min(1),
+  command: z.string().optional(),
 });
 
 export const nginxReadQuerySchema = z.object({

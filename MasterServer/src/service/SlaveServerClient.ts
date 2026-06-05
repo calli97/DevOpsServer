@@ -22,7 +22,7 @@ export interface SlaveNginxConfigDto {
   name: string;
   path: string;
   content: string;
-  command: string;
+  command: string | null;
 }
 
 export interface SlaveCloneRequest {

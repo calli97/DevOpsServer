@@ -146,6 +146,10 @@ export class NginxConfigService {
   }
 
   async runCommands(nginxConfig: NginxConfig): Promise<{ stdout: string; stderr: string }> {
+    if (!nginxConfig.command) {
+      throw new Error("This nginx config has no command configured");
+    }
+
     const full = await this.findByIdWithRelations(nginxConfig.id);
     const slave = full?.projectInstance?.slaveServer ?? null;
 
