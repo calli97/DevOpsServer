@@ -60,12 +60,7 @@ export class DeployController {
 
         results.push({ name: deploy.name, ...result });
 
-        const actionStderr = result.start?.stderr ?? result.restart?.stderr ?? "";
-        if (actionStderr) {
-          errors.push({ deployName: deploy.name, error: actionStderr });
-        } else {
-          succeeded.push(deploy);
-        }
+        succeeded.push(deploy);
       } catch (error) {
         errors.push({
           deployName: deploy.name,

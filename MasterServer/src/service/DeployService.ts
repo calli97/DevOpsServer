@@ -247,11 +247,6 @@ export class DeployService {
       result = await this.restart(instanceDir, deploy);
     }
 
-    const actionStderr = result.start?.stderr ?? result.restart?.stderr ?? "";
-    if (actionStderr) {
-      throw new Error(actionStderr);
-    }
-
     deploy.started = true;
     const savedDeploy = await this.deployRepository.save(deploy);
     return { deploy: savedDeploy, results: result };

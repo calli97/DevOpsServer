@@ -15,6 +15,7 @@ class PM2Service {
       throw new Error(`Invalid deploy name: ${name}`);
     }
 
+    try { await execAsync(`pm2 delete ${sanitizedName}`); } catch {}
     const { stdout, stderr } = await execAsync(
       `pm2 start "${startCommands}" --name ${sanitizedName}`,
       { cwd },
