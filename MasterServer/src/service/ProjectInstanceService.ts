@@ -190,6 +190,7 @@ export class ProjectInstanceService {
           startPath: d.startPath,
           buildCommands: d.buildCommands ?? null,
           startCommands: d.startCommands,
+          postStartCommands: d.postStartCommands ?? null,
           started: d.started,
           isStaticSite: d.isStaticSite,
         })),
