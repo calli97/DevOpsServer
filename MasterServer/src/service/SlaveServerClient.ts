@@ -8,6 +8,7 @@ export interface SlaveDeployDto {
   startPath: string;
   buildCommands: string | null;
   startCommands: string;
+  postStartCommands: string | null;
   started: boolean;
   isStaticSite: boolean;
 }
@@ -55,6 +56,7 @@ export interface SlaveDeployResultDto {
   build?: SlaveDeployLogDto;
   start?: SlaveDeployLogDto;
   restart?: SlaveDeployLogDto;
+  postStart?: SlaveDeployLogDto;
 }
 
 export interface SlaveDeployResponse {

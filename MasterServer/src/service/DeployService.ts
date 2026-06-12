@@ -22,6 +22,7 @@ export interface DeployResult {
   build?: DeployLog;
   start?: DeployLog;
   restart?: DeployLog;
+  postStart?: DeployLog;
   stop?: DeployLog;
 }
 
@@ -98,6 +99,29 @@ export class DeployService {
     return { stdout, stderr };
   }
 
+  private async runPostStartCommands(
+    projectPath: string,
+    deploy: Deploy,
+  ): Promise<{ stdout: string; stderr: string }> {
+    if (!deploy.postStartCommands) {
+      return { stdout: "", stderr: "" };
+    }
+
+    const cmds: string[] = JSON.parse(deploy.postStartCommands);
+    if (!Array.isArray(cmds) || cmds.length === 0) {
+      throw new Error("postStartCommands must be a non-empty array");
+    }
+
+    const { stdout, stderr } = await execAsync(cmds.join(" && "), {
+      cwd: path.join(projectPath, deploy.startPath),
+    });
+
+    logger.info(`[DeployService] PostStart ${deploy.name}:`, stdout);
+    if (stderr) logger.warning(`[DeployService] PostStart stderr:`, stderr);
+
+    return { stdout, stderr };
+  }
+
   private async gitPull(
     projectPath: string,
     branch: string,
@@ -120,14 +144,16 @@ export class DeployService {
       `[DeployService] Build completed for deploy ${deploy.name} [ID: ${deploy.id}]`,
     );
     if (deploy.isStaticSite) {
-      return { build };
+      const postStart = await this.runPostStartCommands(projectPath, deploy);
+      return { build, postStart };
     }
     const start = await this.pm2Service.start(
       deploy.name,
       deploy.startCommands,
       path.join(projectPath, deploy.startPath),
     );
-    return { build, start };
+    const postStart = await this.runPostStartCommands(projectPath, deploy);
+    return { build, start, postStart };
   }
 
   async restart(
@@ -141,13 +167,15 @@ export class DeployService {
     }
     const build = await this.runBuildCommands(projectPath, deploy);
     if (deploy.isStaticSite) {
-      return { build };
+      const postStart = await this.runPostStartCommands(projectPath, deploy);
+      return { build, postStart };
     }
     const restart = await this.pm2Service.restart(
       deploy.name,
       path.join(projectPath, deploy.startPath),
     );
-    return { build, restart };
+    const postStart = await this.runPostStartCommands(projectPath, deploy);
+    return { build, restart, postStart };
   }
 
   async stop(
@@ -210,6 +238,7 @@ export class DeployService {
           startPath: deploy.startPath,
           buildCommands: deploy.buildCommands ?? null,
           startCommands: deploy.startCommands,
+          postStartCommands: deploy.postStartCommands ?? null,
           started: deploy.started,
           isStaticSite: deploy.isStaticSite,
         }],
@@ -233,7 +262,7 @@ export class DeployService {
       const savedDeploy = await this.deployRepository.save(deploy);
       const slaveResult = response.results.find((r) => r.name === deploy.name);
       const results: DeployResult = slaveResult
-        ? { build: slaveResult.build, start: slaveResult.start, restart: slaveResult.restart }
+        ? { build: slaveResult.build, start: slaveResult.start, restart: slaveResult.restart, postStart: slaveResult.postStart }
         : {};
       return { deploy: savedDeploy, results };
     }

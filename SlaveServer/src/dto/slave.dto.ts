@@ -7,6 +7,7 @@ export interface DeployDto {
   startPath: string;
   buildCommands: string | null;
   startCommands: string;
+  postStartCommands: string | null;
   started: boolean;
   isStaticSite: boolean;
 }
@@ -58,6 +59,7 @@ export interface DeployOpResultDto {
   build?: DeployLogDto;
   start?: DeployLogDto;
   restart?: DeployLogDto;
+  postStart?: DeployLogDto;
 }
 
 export interface DeployResultDto {
@@ -65,6 +67,7 @@ export interface DeployResultDto {
   build?: DeployLogDto;
   start?: DeployLogDto;
   restart?: DeployLogDto;
+  postStart?: DeployLogDto;
 }
 
 export interface DeployResponse {
@@ -85,6 +88,7 @@ export const deployDtoSchema = z.object({
   startPath: z.string(),
   buildCommands: z.string().nullable().optional(),
   startCommands: z.string().min(1),
+  postStartCommands: z.string().nullable().optional(),
   started: z.boolean(),
   isStaticSite: z.boolean(),
 });

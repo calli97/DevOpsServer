@@ -5,6 +5,7 @@ export const createDeployDirectSchema = z.object({
   startPath: z.string().min(1, "startPath is required"),
   buildCommands: z.string().nullable().optional(),
   startCommands: z.string().min(1, "startCommands is required"),
+  postStartCommands: z.string().nullable().optional(),
   projectInstanceId: z.number().int().positive("projectInstanceId must be a positive integer"),
 });
 
@@ -13,6 +14,7 @@ export const updateDeployDirectSchema = z.object({
   startPath: z.string().min(1, "startPath cannot be empty").optional(),
   buildCommands: z.string().nullable().optional(),
   startCommands: z.string().min(1, "startCommands cannot be empty").optional(),
+  postStartCommands: z.string().nullable().optional(),
   isStaticSite: z.boolean().optional(),
 });
 

@@ -78,6 +78,11 @@ components:
           type: string
           description: Comando para iniciar el proceso en PM2
           example: "node dist/index.js"
+        postStartCommands:
+          type: string
+          nullable: true
+          description: Comandos a ejecutar después del start/restart de PM2 (separados por nueva línea). null si no aplica.
+          example: "npm run db:migrate"
         started:
           type: boolean
           description: Si true, el proceso ya existe en PM2 y se hará restart; si false, se hará start
@@ -152,6 +157,9 @@ components:
         restart:
           $ref: '#/components/schemas/DeployLogDto'
           description: Resultado del restart PM2 (presente si started=true)
+        postStart:
+          $ref: '#/components/schemas/DeployLogDto'
+          description: Resultado de los postStartCommands (presente si hay postStartCommands)
 
     DeployErrorDto:
       type: object

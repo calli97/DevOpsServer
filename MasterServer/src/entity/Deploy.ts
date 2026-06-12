@@ -18,6 +18,9 @@ class Deploy {
   @Column({ nullable: false })
   startCommands: string;
 
+  @Column({ type: "text", nullable: true })
+  postStartCommands: string;
+
   @Column({ nullable: false, default: false })
   started: boolean;
 

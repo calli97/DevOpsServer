@@ -110,6 +110,11 @@ components:
           type: string
           description: Comando para iniciar el proceso con PM2
           example: "node dist/index.js"
+        postStartCommands:
+          type: string
+          nullable: true
+          description: Comandos a ejecutar después del start/restart de PM2. Separados por nueva línea.
+          example: "npm run db:migrate"
         started:
           type: boolean
           description: Indica si el proceso está actualmente activo en PM2
@@ -280,6 +285,10 @@ components:
         startCommands:
           type: string
           example: "node dist/index.js"
+        postStartCommands:
+          type: string
+          nullable: true
+          example: "npm run db:migrate"
         projectInstanceId:
           type: integer
           example: 1
@@ -296,6 +305,9 @@ components:
           nullable: true
         startCommands:
           type: string
+        postStartCommands:
+          type: string
+          nullable: true
         isStaticSite:
           type: boolean
 

@@ -33,6 +33,29 @@ export class DeployService {
     return { stdout, stderr };
   }
 
+  private async runPostStartCommands(
+    projectPath: string,
+    deploy: DeployDto,
+  ): Promise<{ stdout: string; stderr: string }> {
+    if (!deploy.postStartCommands) {
+      return { stdout: "", stderr: "" };
+    }
+
+    const cmds: string[] = JSON.parse(deploy.postStartCommands);
+    if (!Array.isArray(cmds) || cmds.length === 0) {
+      throw new Error("postStartCommands must be a non-empty array");
+    }
+
+    const { stdout, stderr } = await execAsync(cmds.join(" && "), {
+      cwd: path.join(projectPath, deploy.startPath),
+    });
+
+    logger.info(`[DeployService] PostStart ${deploy.name}:`, stdout);
+    if (stderr) logger.warning(`[DeployService] PostStart stderr:`, stderr);
+
+    return { stdout, stderr };
+  }
+
   async start(
     projectPath: string,
     deploy: DeployDto,
@@ -42,7 +65,8 @@ export class DeployService {
     logger.success(`[DeployService] Build completed for deploy ${deploy.name}`);
 
     if (deploy.isStaticSite) {
-      return { build };
+      const postStart = await this.runPostStartCommands(projectPath, deploy);
+      return { build, postStart };
     }
 
     const start = await this.pm2Service.start(
@@ -50,7 +74,8 @@ export class DeployService {
       deploy.startCommands,
       path.join(projectPath, deploy.startPath),
     );
-    return { build, start };
+    const postStart = await this.runPostStartCommands(projectPath, deploy);
+    return { build, start, postStart };
   }
 
   async restart(
@@ -60,14 +85,16 @@ export class DeployService {
     const build = await this.runBuildCommands(projectPath, deploy);
 
     if (deploy.isStaticSite) {
-      return { build };
+      const postStart = await this.runPostStartCommands(projectPath, deploy);
+      return { build, postStart };
     }
 
     const restart = await this.pm2Service.restart(
       deploy.name,
       path.join(projectPath, deploy.startPath),
     );
-    return { build, restart };
+    const postStart = await this.runPostStartCommands(projectPath, deploy);
+    return { build, restart, postStart };
   }
 
   async stop(
