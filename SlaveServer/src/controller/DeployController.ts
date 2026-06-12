@@ -109,6 +109,7 @@ export class DeployController {
         startPath,
         buildCommands: null,
         startCommands: "",
+        postStartCommands: null,
         started: true,
         isStaticSite: false,
       });
